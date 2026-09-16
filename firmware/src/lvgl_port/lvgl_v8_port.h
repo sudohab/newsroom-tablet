@@ -74,11 +74,20 @@
 #define LVGL_PORT_AVOID_TEARING_MODE            (CONFIG_LVGL_PORT_AVOID_TEARING_MODE)
                                                         // Valid if using ESP-IDF
 #else
-// newsroom-tablet: 3 = Doppelpuffer im PSRAM + LVGL-Direktmodus. Ohne diese
-// Einstellung zeichnet LVGL in zwei kleine Streifenpuffer und schiebt sie
-// waehrend des laufenden Bildaufbaus ins Panel - das sieht man als Flackern
-// und Reissen. Kostet 2 x 768 KB PSRAM (von 8 MB).
-#define LVGL_PORT_AVOID_TEARING_MODE            (3)     // Valid if using Arduino
+// newsroom-tablet: 2 = drei Bildpuffer im PSRAM, LVGL zeichnet jedes Bild
+// vollstaendig neu.
+//
+// Weg dorthin: Ohne Anti-Tearing (0) flackerte es staendig. Modus 3
+// (Doppelpuffer, Direktmodus) war besser, aber beim Beruehren - also beim
+// Scrollen, wenn sich grosse Flaechen aendern - brach die Anzeige zusammen:
+// Im Direktmodus muss LVGL die geaenderten Bereiche in beide Puffer kopieren,
+// und genau dieses Nachziehen kam bei grossen Aenderungen nicht hinterher.
+// Modus 2 kennt das Problem nicht, weil jedes Bild einmal vollstaendig
+// gezeichnet und dann als Ganzes umgeschaltet wird.
+//
+// Kostet 3 x 768 KB PSRAM (von 8 MB) und mehr Rechenzeit je Bild - beides ist
+// hier vorhanden, ein ruhiges Bild dagegen nicht verhandelbar.
+#define LVGL_PORT_AVOID_TEARING_MODE            (2)     // Valid if using Arduino
 #endif
 
 #if LVGL_PORT_AVOID_TEARING_MODE != 0
