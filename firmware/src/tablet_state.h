@@ -11,6 +11,8 @@
 
 #include <Arduino.h>
 
+#include <vector>
+
 namespace tablet_state {
 
 struct Snapshot {
@@ -65,6 +67,23 @@ bool consumeChanged();
 // Sekunden – nur aus der Hauptschleife aufrufen, nie aus einem LVGL-Rückruf.
 // Rückgabe: leerer Text bei Erfolg, sonst die Fehlermeldung für die Anzeige.
 String sendAction(const String &json);
+
+// --- Radio ------------------------------------------------------------------
+
+struct Station {
+    String id;
+    String name;
+};
+
+// Holt die Favoritenliste vom Pi. Blockiert bis zu acht Sekunden, also nur aus
+// der Hauptschleife aufrufen. Rückgabe: leerer Text bei Erfolg, sonst der
+// Fehler für die Anzeige.
+String fetchStations(std::vector<Station> &stations);
+
+String playStation(const String &id);
+String stopRadio();
+String sleepTimer(int minutes);
+String cancelSleepTimer();
 
 // Bequeme Kurzformen für die Oberfläche.
 String snooze();

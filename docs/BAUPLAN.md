@@ -117,7 +117,7 @@ läuft ab und lässt sich in der Weboberfläche einzeln zurückziehen.
 | 2 | Server: `app/tablets.py` + `app/tablet_api.py` (Token, Status, Konfiguration, Aktions-Allowlist) inkl. Tests | **fertig im Repo newsroom21** |
 | 3 | Firmware: Startseite (Uhr, Weckzeit, Wetter, Snooze, Lautstärke) an der echten API | **fertig, auf dem Gerät** |
 | 3b | Newsroom-Ansicht (orbital) als Bild vom Pi | Firmware fertig, Server-Teil noch nicht auf dem Pi |
-| 4 | Firmware: Radio-Seite (Favoriten, Start/Stop, Sleeptimer) | offen |
+| 4 | Firmware: Radio-Seite (Favoriten, Start/Stop, Sleeptimer) | **fertig, auf dem Gerät** |
 | 5 | Firmware: Podcast-Seite (Abos, Episoden, Start/Pause) | offen |
 | 6 | Firmware: eigene Einstellungsseite auf dem Gerät | offen |
 | 7 | newsroom21-Weboberfläche: Tab „Tisch-Display“ mit Probier-Knopf | offen |

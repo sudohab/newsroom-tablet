@@ -160,6 +160,59 @@ String sendAction(const String &json) {
     return String();
 }
 
+String fetchStations(std::vector<Station> &stations) {
+    stations.clear();
+    const api_client::Result result = api_client::get("/api/tablet/radio");
+    if (!result.ok) return result.error.isEmpty() ? String("Radio nicht abrufbar") : result.error;
+
+    // Nur die beiden Felder lesen, die die Liste braucht – die Antwort enthält
+    // je Sender noch Adresse, Codec, Land und Stichworte.
+    JsonDocument filter;
+    filter["favorites"][0]["id"] = true;
+    filter["favorites"][0]["name"] = true;
+    JsonDocument doc;
+    if (deserializeJson(doc, result.body, DeserializationOption::Filter(filter))) {
+        return "Senderliste nicht lesbar";
+    }
+    for (JsonObjectConst entry : doc["favorites"].as<JsonArrayConst>()) {
+        Station station;
+        station.id = take(entry["id"], 64);
+        station.name = take(entry["name"], 60);
+        // Ohne Kennung ließe sich der Sender nicht starten.
+        if (!station.id.isEmpty() && !station.name.isEmpty()) stations.push_back(station);
+        // Mehr als 40 Sender kann man auf einem Bildschirm ohnehin nicht
+        // sinnvoll antippen – und der Speicher ist begrenzt.
+        if (stations.size() >= 40) break;
+    }
+    return String();
+}
+
+// Baut JSON von Hand: Die Werte sind entweder Zahlen oder Kennungen aus der
+// Antwort des Pi (Hexziffern und Bindestriche), also nichts, was das JSON
+// aufbrechen könnte. Trotzdem wird die Kennung vorher geprüft.
+static bool looksLikeId(const String &id) {
+    if (id.isEmpty() || id.length() > 64) return false;
+    for (size_t i = 0; i < id.length(); ++i) {
+        const char c = id[i];
+        if (!isHexadecimalDigit(c) && c != '-') return false;
+    }
+    return true;
+}
+
+String playStation(const String &id) {
+    if (!looksLikeId(id)) return "Unbekannter Sender";
+    return sendAction("{\"action\":\"radio_play\",\"station_id\":\"" + id + "\"}");
+}
+
+String stopRadio() { return sendAction("{\"action\":\"radio_stop\"}"); }
+
+String sleepTimer(int minutes) {
+    if (minutes < 1 || minutes > 240) return "Zeit ausserhalb des Bereichs";
+    return sendAction("{\"action\":\"radio_sleep\",\"minutes\":" + String(minutes) + "}");
+}
+
+String cancelSleepTimer() { return sendAction("{\"action\":\"radio_sleep_cancel\"}"); }
+
 String snooze() { return sendAction("{\"action\":\"snooze\"}"); }
 String alarmOff() { return sendAction("{\"action\":\"alarm_off\"}"); }
 String volumeUp() { return sendAction("{\"action\":\"volume_up\"}"); }

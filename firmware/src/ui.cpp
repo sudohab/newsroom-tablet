@@ -32,6 +32,7 @@ constexpr uint32_t kColorAccent = 0x2f6fd0;
 lv_obj_t *screenNewsroom = nullptr;
 lv_obj_t *screenHome = nullptr;
 lv_obj_t *screenWifi = nullptr;
+lv_obj_t *screenRadio = nullptr;
 bool newsroomAvailable = false;
 
 // Startseite
@@ -48,6 +49,13 @@ lv_obj_t *labelCall = nullptr;
 lv_obj_t *btnSnooze = nullptr;
 lv_obj_t *btnAlarmOff = nullptr;
 
+// Radio-Seite
+lv_obj_t *listStations = nullptr;
+lv_obj_t *labelRadioStatus = nullptr;
+std::vector<tablet_state::Station> stations;
+String pendingStationId;
+int pendingSleepMinutes = 0;
+
 // WLAN-Seite
 lv_obj_t *listNetworks = nullptr;
 lv_obj_t *labelSelected = nullptr;
@@ -59,7 +67,8 @@ String selectedSsid;
 // Wünsche aus der Oberfläche, die außerhalb der LVGL-Sperre erledigt werden.
 // Warum so? Ein Tastendruck läuft in der LVGL-Aufgabe. Würde dort eine
 // HTTPS-Anfrage starten, stünde die Anzeige bis zu acht Sekunden still.
-enum class Pending { None, Scan, Connect, Snooze, AlarmOff, VolumeUp, VolumeDown };
+enum class Pending { None, Scan, Connect, Snooze, AlarmOff, VolumeUp, VolumeDown,
+                     RadioList, RadioPlay, RadioStop, RadioSleep, RadioSleepCancel };
 volatile Pending pending = Pending::None;
 String pendingPassword;
 
@@ -119,6 +128,46 @@ void onNewsroomClicked(lv_event_t *) {
 
 void onShowNewsroomClicked(lv_event_t *) {
     if (newsroomAvailable) lv_scr_load(screenNewsroom);
+}
+
+void onRadioPageClicked(lv_event_t *) {
+    lv_scr_load(screenRadio);
+    setText(labelRadioStatus, "Hole Senderliste ...");
+    lv_obj_clean(listStations);
+    pending = Pending::RadioList;
+}
+
+void onStationClicked(lv_event_t *event) {
+    // Welcher Listeneintrag? Die Position in der Liste entspricht der Position
+    // in `stations` – die Kennung selbst steht nicht in der Anzeige.
+    lv_obj_t *btn = lv_event_get_target(event);
+    const uint32_t index = lv_obj_get_index(btn);
+    if (index >= stations.size()) return;
+    setText(labelRadioStatus, "Starte " + stations[index].name + " ...");
+    pendingStationId = stations[index].id;
+    pending = Pending::RadioPlay;
+}
+
+void onRadioStopClicked(lv_event_t *) {
+    setText(labelRadioStatus, "Halte an ...");
+    pending = Pending::RadioStop;
+}
+
+void onSleep30Clicked(lv_event_t *) {
+    pendingSleepMinutes = 30;
+    setText(labelRadioStatus, "Einschlaf-Timer 30 Minuten ...");
+    pending = Pending::RadioSleep;
+}
+
+void onSleep60Clicked(lv_event_t *) {
+    pendingSleepMinutes = 60;
+    setText(labelRadioStatus, "Einschlaf-Timer 60 Minuten ...");
+    pending = Pending::RadioSleep;
+}
+
+void onSleepCancelClicked(lv_event_t *) {
+    setText(labelRadioStatus, "Timer aus ...");
+    pending = Pending::RadioSleepCancel;
 }
 
 void onWifiPageClicked(lv_event_t *) {
@@ -213,6 +262,8 @@ void buildHomeScreen() {
     makeButton(screenHome, "Lauter", onVolumeUpClicked, 150, 70,
                LV_ALIGN_BOTTOM_LEFT, 310, -30);
 
+    makeButton(screenHome, "Radio", onRadioPageClicked, 150, 70,
+               LV_ALIGN_BOTTOM_RIGHT, -380, -30);
     makeButton(screenHome, "Ansicht", onShowNewsroomClicked, 150, 70,
                LV_ALIGN_BOTTOM_RIGHT, -210, -30);
     makeButton(screenHome, "WLAN", onWifiPageClicked, 150, 70,
@@ -223,6 +274,34 @@ void buildHomeScreen() {
                             LV_ALIGN_TOP_RIGHT, -40, 150);
     labelMessage = makeLabel(screenHome, &lv_font_montserrat_20, kColorMuted,
                              LV_ALIGN_TOP_RIGHT, -40, 180);
+}
+
+void buildRadioScreen() {
+    screenRadio = lv_obj_create(nullptr);
+    lv_obj_set_style_bg_color(screenRadio, lv_color_hex(kColorBackground), 0);
+
+    makeLabel(screenRadio, &lv_font_montserrat_28, kColorText,
+              LV_ALIGN_TOP_LEFT, 30, 20, "Radio");
+
+    // Die Favoritenliste ist bewusst breit und die Einträge hoch: Sender
+    // wählt man im Vorbeigehen, oft ohne hinzusehen.
+    listStations = lv_list_create(screenRadio);
+    lv_obj_set_size(listStations, 480, 380);
+    lv_obj_align(listStations, LV_ALIGN_TOP_LEFT, 30, 70);
+
+    labelRadioStatus = makeLabel(screenRadio, &lv_font_montserrat_20, kColorMuted,
+                                 LV_ALIGN_TOP_RIGHT, -30, 70);
+
+    makeButton(screenRadio, "Aus", onRadioStopClicked, 240, 70,
+               LV_ALIGN_TOP_RIGHT, -30, 120, kColorAlarm);
+    makeButton(screenRadio, "30 Min", onSleep30Clicked, 115, 70,
+               LV_ALIGN_TOP_RIGHT, -155, 200);
+    makeButton(screenRadio, "60 Min", onSleep60Clicked, 115, 70,
+               LV_ALIGN_TOP_RIGHT, -30, 200);
+    makeButton(screenRadio, "Timer aus", onSleepCancelClicked, 240, 70,
+               LV_ALIGN_TOP_RIGHT, -30, 280);
+    makeButton(screenRadio, "Zurueck", onBackClicked, 240, 70,
+               LV_ALIGN_TOP_RIGHT, -30, 380);
 }
 
 void buildNewsroomScreen() {
@@ -355,6 +434,7 @@ void begin() {
     lvgl_port_lock(-1);
     buildHomeScreen();
     buildWifiScreen();
+    buildRadioScreen();
     buildNewsroomScreen();
     // Die Newsroom-Ansicht ist die Startseite, solange sie verfügbar ist.
     lv_scr_load(newsroomAvailable ? screenNewsroom : screenHome);
@@ -395,6 +475,27 @@ void tick() {
         case Pending::AlarmOff:    message = tablet_state::alarmOff(); break;
         case Pending::VolumeUp:    message = tablet_state::volumeUp(); break;
         case Pending::VolumeDown:  message = tablet_state::volumeDown(); break;
+        case Pending::RadioPlay:   message = tablet_state::playStation(pendingStationId); break;
+        case Pending::RadioStop:   message = tablet_state::stopRadio(); break;
+        case Pending::RadioSleep:  message = tablet_state::sleepTimer(pendingSleepMinutes); break;
+        case Pending::RadioSleepCancel: message = tablet_state::cancelSleepTimer(); break;
+
+        case Pending::RadioList: {
+            const String error = tablet_state::fetchStations(stations);
+            lvgl_port_lock(-1);
+            lv_obj_clean(listStations);
+            for (const auto &station : stations) {
+                lv_obj_t *btn = lv_list_add_btn(listStations, LV_SYMBOL_AUDIO,
+                                                station.name.c_str());
+                lv_obj_set_style_text_font(btn, &lv_font_montserrat_20, 0);
+                lv_obj_add_event_cb(btn, onStationClicked, LV_EVENT_CLICKED, nullptr);
+            }
+            setText(labelRadioStatus, !error.isEmpty() ? error
+                    : stations.empty() ? "Keine Favoriten – in der Weboberflaeche anlegen"
+                                       : String(stations.size()) + " Sender");
+            lvgl_port_unlock();
+            return;
+        }
 
         case Pending::Scan:
             // Der Suchlauf ist asynchron; das Ergebnis kommt in den Rückruf.
@@ -429,8 +530,13 @@ void tick() {
             return;
     }
 
+    const bool onRadioPage = lv_scr_act() == screenRadio;
     lvgl_port_lock(-1);
-    setText(labelMessage, message.isEmpty() ? "" : "Fehler: " + message);
+    if (onRadioPage) {
+        setText(labelRadioStatus, message.isEmpty() ? "Erledigt" : "Fehler: " + message);
+    } else {
+        setText(labelMessage, message.isEmpty() ? "" : "Fehler: " + message);
+    }
     lvgl_port_unlock();
 }
 
