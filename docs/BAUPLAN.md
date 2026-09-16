@@ -258,3 +258,26 @@ Das Bild wird nur geholt, während die Seite sichtbar ist.
 Dafür liefert `/api/tablet/state` jetzt auch die nächsten Termine und zu jeder
 Schlagzeile die Quelle – weiterhin nur Anzeigedaten: kein Kalendername, keine
 Beschreibung, keine Links.
+
+### 2026-09-16 – Glas-Optik, Umlaute, scrollbare Spalten
+
+Rückmeldung von Hannes: Ansicht vom Pi gefällt nicht (gelöscht), Knöpfe zu
+groß, Umlaute fehlen, modernes Aussehen gewünscht, Listen sollen scrollen.
+
+* **Umlaute.** Die in LVGL eingebauten Montserrat-Schriften enthalten nur
+  ASCII – „ä", „ö", „ü", „ß" erschienen als leere Kästchen. Jetzt vier selbst
+  erzeugte Schriften (18/22/30/56 px) mit ASCII **und** dem kompletten
+  Latin-1-Bereich, also allen Umlauten und dem Grad-Zeichen. Erzeugt mit
+  `scripts/build_fonts.sh` (lv_font_conv über npx); die fertigen `.c`-Dateien
+  liegen im Git, Node.js ist also nur zum Ändern nötig.
+* **Glas-Optik.** Dunkler Farbverlauf als Grund, darüber Flächen in Weiß mit
+  geringer Deckkraft, hauchdünner heller Rand, große Rundungen, weicher
+  Schatten. LVGL 8 kann den Hintergrund nicht echt weichzeichnen – dafür fehlt
+  dem Mikrocontroller die Leistung –, aber der Eindruck entsteht auch so.
+  Alles in `src/ui_theme.*`, damit das Aussehen an einer Stelle liegt.
+* **Kleinere Knöpfe:** 54 px hoch statt 90, die Bedienleiste braucht jetzt ein
+  Fünftel der Höhe statt eines Drittels.
+* **Termine und Nachrichten scrollen** senkrecht, mit dezenter Bildlaufleiste.
+* Die vom Pi gezeichnete Ansicht wurde **gelöscht**, auch serverseitig
+  (newsroom21-Commit `371fe8a`). Weniger Code ist besser als eine
+  abgeschaltete Funktion, die mitgepflegt werden muss.

@@ -108,6 +108,9 @@ Liste (`STATUS`, `TOKEN <wert>`, `HOST <adresse>`, `FORGET-TOKEN`,
 | `src/api_client.*` | HTTPS zu newsroom21: prüft die Kette gegen die eigene Root-CA, folgt keinen Weiterleitungen, begrenzt die Antwortgröße |
 | `src/ui.*` | Startseite (Uhr, Status, Testknopf) und WLAN-Seite (Liste, Tastatur) |
 | `src/serial_console.*` | Einrichtung per USB: Token und Pi-Adresse setzen. Zeigt nie Token oder WLAN-Passwort an, sondern nur, **ob** etwas hinterlegt ist |
+| `src/ui_theme.*` | Aussehen an einer Stelle: Farben, Glasflächen, Knöpfe, scrollbare Listen |
+| `src/tablet_state.*` | Zustand vom Pi holen, Aktionen schicken (Wecker, Lautstärke, Radio) |
+| `src/fonts/` | Schriften **mit Umlauten** (LVGLs eingebaute können nur ASCII), erzeugt von `scripts/build_fonts.sh` |
 | `src/lvgl_port/` | Offizielle LVGL-Anbindung von Espressif (unverändert übernommen) |
 
 ## 6. Sicherheitshinweise
