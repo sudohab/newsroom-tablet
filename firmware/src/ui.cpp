@@ -204,24 +204,29 @@ void buildHomeScreen() {
     makeLabel(cardNews, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 0, 0, "NACHRICHTEN");
     areaNews = makeScrollArea(cardNews, 0, 32, 338, 186);
 
-    // --- Bedienleiste: kleine Knöpfe, damit die Anzeige Platz behält -------
-    btnSnooze = makeButton(screenHome, "Schlummern", onSnoozeClicked, 150, 54,
-                           LV_ALIGN_BOTTOM_LEFT, 20, -16, kAccent);
-    btnAlarmOff = makeButton(screenHome, "Aus", onAlarmOffClicked, 80, 54,
-                             LV_ALIGN_BOTTOM_LEFT, 180, -16, kAlarm);
-    makeButton(screenHome, "–", onVolumeDownClicked, 54, 54,
-               LV_ALIGN_BOTTOM_LEFT, 280, -16);
-    labelVolume = makeLabel(screenHome, &ui_font_22, kText,
-                            LV_ALIGN_BOTTOM_LEFT, 346, -32, "--%");
-    makeButton(screenHome, "+", onVolumeUpClicked, 54, 54,
-               LV_ALIGN_BOTTOM_LEFT, 412, -16);
-    makeButton(screenHome, "Radio", onRadioPageClicked, 110, 54,
-               LV_ALIGN_BOTTOM_RIGHT, -140, -16);
-    makeButton(screenHome, "WLAN", onWifiPageClicked, 110, 54,
-               LV_ALIGN_BOTTOM_RIGHT, -20, -16);
+    // --- Bedienleiste -----------------------------------------------------
+    // Die Knöpfe liegen in einer Leiste, die ihre Abstände selbst berechnet.
+    // Von Hand gesetzte Koordinaten waren die Ursache dafür, dass sich Knöpfe
+    // überlappten, sobald eine Beschriftung länger wurde.
+    lv_obj_t *bar = makeButtonBar(screenHome, 20, 400, 760, 60);
+    btnSnooze = addBarButton(bar, "Schlummern", onSnoozeClicked, 150, 54, kAccent);
+    btnAlarmOff = addBarButton(bar, "Aus", onAlarmOffClicked, 80, 54, kAlarm);
+    addBarButton(bar, "–", onVolumeDownClicked, 54, 54);
+    // Die Lautstärke steht zwischen den beiden Tasten und ist mittig
+    // ausgerichtet, damit "5%" und "100%" gleich sitzen.
+    labelVolume = lv_label_create(bar);
+    lv_obj_set_style_text_font(labelVolume, &ui_font_22, 0);
+    lv_obj_set_style_text_color(labelVolume, lv_color_hex(kText), 0);
+    lv_obj_set_width(labelVolume, 64);
+    lv_obj_set_style_text_align(labelVolume, LV_TEXT_ALIGN_CENTER, 0);
+    lv_label_set_text(labelVolume, "--%");
+    addBarButton(bar, "+", onVolumeUpClicked, 54, 54);
+    addBarSpacer(bar);
+    addBarButton(bar, "Radio", onRadioPageClicked, 110, 54);
+    addBarButton(bar, "WLAN", onWifiPageClicked, 110, 54);
 
     labelMessage = makeLabel(screenHome, &ui_font_18, kTextMuted,
-                             LV_ALIGN_BOTTOM_MID, 0, -78);
+                             LV_ALIGN_TOP_MID, 0, 388);
 
     // --- Anrufbanner: liegt über allem, sonst unsichtbar -------------------
     bannerCall = makeCard(screenHome, 60, 180, 680, 120);
@@ -254,10 +259,11 @@ void buildRadioScreen() {
 
     makeButton(screenRadio, "Aus", onRadioStopClicked, 250, 54,
                LV_ALIGN_TOP_RIGHT, -20, 70, kAlarm);
-    makeButton(screenRadio, "30 Min", onSleep30Clicked, 118, 54,
-               LV_ALIGN_TOP_RIGHT, -152, 140);
-    makeButton(screenRadio, "60 Min", onSleep60Clicked, 118, 54,
-               LV_ALIGN_TOP_RIGHT, -20, 140);
+    // Die beiden Timer-Knöpfe in einer eigenen Leiste: So bleibt der Abstand
+    // zwischen ihnen richtig, auch wenn die Beschriftung sich ändert.
+    lv_obj_t *timerBar = makeButtonBar(screenRadio, 530, 140, 250, 60);
+    addBarButton(timerBar, "30 Min", onSleep30Clicked, 120, 54);
+    addBarButton(timerBar, "60 Min", onSleep60Clicked, 120, 54);
     makeButton(screenRadio, "Timer aus", onSleepCancelClicked, 250, 54,
                LV_ALIGN_TOP_RIGHT, -20, 210);
     makeButton(screenRadio, "Zurück", onBackClicked, 250, 54,

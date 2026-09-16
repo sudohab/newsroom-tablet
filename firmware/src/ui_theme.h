@@ -52,6 +52,20 @@ lv_obj_t *makeButton(lv_obj_t *parent, const char *text, lv_event_cb_t handler,
                      lv_align_t align, lv_coord_t x, lv_coord_t y,
                      uint32_t color = 0);
 
+// Ein Knopf innerhalb einer Leiste (siehe makeButtonBar).
+lv_obj_t *addBarButton(lv_obj_t *bar, const char *text, lv_event_cb_t handler,
+                       lv_coord_t w, lv_coord_t h, uint32_t color = 0);
+
+// Eine waagerechte Leiste, in der Knöpfe nebeneinander liegen. Der Abstand
+// wird von LVGL berechnet, nicht von Hand gesetzt – so können sich zwei
+// Knöpfe nicht überlappen, auch wenn sich Beschriftungen oder Größen ändern.
+lv_obj_t *makeButtonBar(lv_obj_t *parent, lv_coord_t x, lv_coord_t y,
+                        lv_coord_t w, lv_coord_t h);
+
+// Ein unsichtbarer Platzhalter, der den restlichen Platz in einer Leiste
+// einnimmt: Was danach kommt, rutscht an den rechten Rand.
+lv_obj_t *addBarSpacer(lv_obj_t *bar);
+
 // Ein scrollbarer Bereich für Listen (Termine, Nachrichten): senkrecht
 // scrollbar, mit dezenter Bildlaufleiste, Inhalte untereinander.
 lv_obj_t *makeScrollArea(lv_obj_t *parent, lv_coord_t x, lv_coord_t y,

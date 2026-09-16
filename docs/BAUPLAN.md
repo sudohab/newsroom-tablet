@@ -281,3 +281,26 @@ groß, Umlaute fehlen, modernes Aussehen gewünscht, Listen sollen scrollen.
 * Die vom Pi gezeichnete Ansicht wurde **gelöscht**, auch serverseitig
   (newsroom21-Commit `371fe8a`). Weniger Code ist besser als eine
   abgeschaltete Funktion, die mitgepflegt werden muss.
+
+### 2026-09-16 – Flackern (zweiter Anlauf), Knöpfe, Ton
+
+**Flackern kam und ging.** Der Bounce-Puffer war mit 10 Zeilen zu klein: Er
+reicht im Ruhezustand, aber sobald WLAN und TLS gleichzeitig arbeiten, staut
+sich der PSRAM-Zugriff und das Panel bekommt seine Daten nicht rechtzeitig –
+genau das erklärt, warum es kam und ging. Jetzt 40 Zeilen (zwei Puffer à
+800×40×2 Byte = 128 KB internes RAM, von gut 220 KB frei). Danach am Gerät:
+124 KB intern frei, TLS-Abrufe laufen weiter fehlerfrei.
+
+**Knöpfe überlappten sich.** Ursache waren von Hand gesetzte Koordinaten: Wird
+eine Beschriftung länger oder ein Knopf breiter, schiebt sich der nächste
+darunter. Die Bedienleisten sind jetzt **Flex-Reihen** – LVGL berechnet die
+Abstände selbst, ein Überlappen ist damit ausgeschlossen. Ein unsichtbarer
+Platzhalter (`addBarSpacer`) schiebt die rechte Gruppe an den Rand.
+
+**Ton: Das Board hat keine Audio-Hardware.** Kein Lautsprecher, kein Codec,
+kein Verstärker, kein Summer – nachgesehen im Waveshare-Wiki. Belegt sind laut
+Boarddefinition die GPIOs 0–5, 7–10, 14, 17, 18, 21, 38–42, 45–48; dazu 19/20
+(native USB), 43/44 (serielle Schnittstelle) und 33–37 (Octal-PSRAM). Frei
+wären also allenfalls 6, 11, 12, 13, 15 und 16 – wovon ein Teil auf dem Board
+für SD-Karte, CAN und RS485 verdrahtet ist. Vor einem Umbau muss der
+Schaltplan geprüft werden.

@@ -79,7 +79,12 @@ void setup() {
         // Der Bounce-Puffer liegt im schnellen internen RAM und fuettert das
         // Panel gleichmaessig nach. Ohne ihn reicht die PSRAM-Bandbreite bei
         // 800x480 nicht zuverlaessig, und das Bild verrutscht zeilenweise.
-        static_cast<BusRGB *>(lcdBus)->configRGB_BounceBufferSize(lcd->getFrameWidth() * 10);
+        //
+        // 40 Zeilen statt 10: Mit dem kleinen Puffer flackerte es weiterhin
+        // gelegentlich - immer dann, wenn gleichzeitig WLAN und TLS arbeiten
+        // und der PSRAM-Zugriff sich staut. Zwei Puffer a 800x40x2 Byte
+        // belegen zusammen 128 KB internen RAM (von gut 220 KB frei).
+        static_cast<BusRGB *>(lcdBus)->configRGB_BounceBufferSize(lcd->getFrameWidth() * 40);
     }
 #endif
 
