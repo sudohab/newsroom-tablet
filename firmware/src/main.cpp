@@ -68,25 +68,22 @@ void setup() {
         ESP.restart();
     }
 
-#if LVGL_PORT_AVOID_TEARING_MODE
-    // Gegen Flackern und Reissen: Das Panel bekommt zwei vollstaendige
-    // Bildpuffer, zwischen denen umgeschaltet wird, statt Streifen ins
-    // laufende Bild zu schieben.
+    // Gegen Flackern: Der Bounce-Puffer liegt im schnellen internen RAM und
+    // fuettert das Panel vor. Ohne ihn liest das Panel jede Zeile direkt aus
+    // dem PSRAM - und wenn dort gleichzeitig gezeichnet oder gefunkt wird,
+    // kommen die Daten zu spaet und das Bild flackert.
+    //
+    // Bewusst nur EIN Bildpuffer (kein Anti-Tearing-Modus): Mehrere Puffer
+    // erzeugten mehr PSRAM-Verkehr und machten das Flackern schlimmer.
     auto lcd = board->getLCD();
-    lcd->configFrameBufferNumber(LVGL_PORT_DISP_BUFFER_NUM);
     auto lcdBus = lcd->getBus();
     if (lcdBus->getBasicAttributes().type == ESP_PANEL_BUS_TYPE_RGB) {
-        // Der Bounce-Puffer liegt im schnellen internen RAM und fuettert das
-        // Panel gleichmaessig nach. Ohne ihn reicht die PSRAM-Bandbreite bei
-        // 800x480 nicht zuverlaessig, und das Bild verrutscht zeilenweise.
-        //
-        // 40 Zeilen statt 10: Mit dem kleinen Puffer flackerte es weiterhin
-        // gelegentlich - immer dann, wenn gleichzeitig WLAN und TLS arbeiten
-        // und der PSRAM-Zugriff sich staut. Zwei Puffer a 800x40x2 Byte
-        // belegen zusammen 128 KB internen RAM (von gut 220 KB frei).
-        static_cast<BusRGB *>(lcdBus)->configRGB_BounceBufferSize(lcd->getFrameWidth() * 40);
+        // 30 Zeilen; die Groesse muss die Bildhoehe glatt teilen
+        // (800 x 30 Pixel x 16 = 800 x 480). Zwei solche Puffer belegen
+        // zusammen 96 KB internen RAM - mehr vertraegt das Geraet nicht,
+        // ohne dass WLAN und TLS zu wenig uebrig bleibt.
+        static_cast<BusRGB *>(lcdBus)->configRGB_BounceBufferSize(lcd->getFrameWidth() * 30);
     }
-#endif
 
     if (!board->begin()) {
         // Ohne Anzeige ist das Gerät nutzlos. Neustart statt stiller Fehlfunktion.
@@ -100,6 +97,7 @@ void setup() {
         backlight->setBrightness(settings_store::brightness());
     }
 
+    Serial.printf("[start] vor LVGL: %u Byte intern frei\n", ESP.getFreeHeap());
     if (!lvgl_port_init(board->getLCD(), board->getTouch())) {
         Serial.println("[lvgl] Start fehlgeschlagen – Neustart");
         delay(3000);

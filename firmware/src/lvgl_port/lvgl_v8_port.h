@@ -38,6 +38,11 @@
  */
 #define LVGL_PORT_BUFFER_MALLOC_CAPS            (MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)       // Allocate LVGL buffer in SRAM
 // #define LVGL_PORT_BUFFER_MALLOC_CAPS            (MALLOC_CAP_SPIRAM)      // Allocate LVGL buffer in PSRAM
+// 20 Zeilen: 800 x 20 x 2 Byte = 32 KB je Puffer, zwei davon im internen RAM.
+//
+// 60 Zeilen waren zu viel: Zusammen mit dem Bounce-Puffer reichte der interne
+// RAM nicht mehr, die Anlage schlug fehl und das Geraet startete in einer
+// Endlosschleife neu - was am Bildschirm wie heftiges Flackern aussieht.
 #define LVGL_PORT_BUFFER_SIZE_HEIGHT            (20)
 #define LVGL_PORT_BUFFER_NUM                    (2)
 
@@ -74,20 +79,23 @@
 #define LVGL_PORT_AVOID_TEARING_MODE            (CONFIG_LVGL_PORT_AVOID_TEARING_MODE)
                                                         // Valid if using ESP-IDF
 #else
-// newsroom-tablet: 2 = drei Bildpuffer im PSRAM, LVGL zeichnet jedes Bild
-// vollstaendig neu.
+// newsroom-tablet: 0 = ein einziger Bildpuffer, dafuer ein grosser
+// Bounce-Puffer (siehe main.cpp).
 //
-// Weg dorthin: Ohne Anti-Tearing (0) flackerte es staendig. Modus 3
-// (Doppelpuffer, Direktmodus) war besser, aber beim Beruehren - also beim
-// Scrollen, wenn sich grosse Flaechen aendern - brach die Anzeige zusammen:
-// Im Direktmodus muss LVGL die geaenderten Bereiche in beide Puffer kopieren,
-// und genau dieses Nachziehen kam bei grossen Aenderungen nicht hinterher.
-// Modus 2 kennt das Problem nicht, weil jedes Bild einmal vollstaendig
-// gezeichnet und dann als Ganzes umgeschaltet wird.
+// Der Weg dorthin, alles am Geraet geprueft:
+//   0 (klein gepuffert) -> flackerte
+//   3 (zwei Puffer, Direktmodus) -> besser, brach aber beim Scrollen zusammen
+//   2 (drei Puffer, volles Neuzeichnen) -> flackerte am heftigsten
 //
-// Kostet 3 x 768 KB PSRAM (von 8 MB) und mehr Rechenzeit je Bild - beides ist
-// hier vorhanden, ein ruhiges Bild dagegen nicht verhandelbar.
-#define LVGL_PORT_AVOID_TEARING_MODE            (2)     // Valid if using Arduino
+// Je mehr Bildpuffer, desto schlimmer - das dreht die Ursache um: Nicht zu
+// wenig Pufferung ist das Problem, sondern zu viel Verkehr auf dem PSRAM. Das
+// Panel liest sein Bild dauernd aus dem PSRAM; schreibt LVGL dort gleichzeitig
+// ganze Bilder hinein, bekommt das Panel seine Daten zu spaet.
+//
+// Deshalb jetzt: ein Bildpuffer, LVGL zeichnet in kleine Puffer im schnellen
+// internen RAM (unten eingestellt), und ein grosser Bounce-Puffer fuettert das
+// Panel vor. Das ist die Kombination mit dem geringsten PSRAM-Verkehr.
+#define LVGL_PORT_AVOID_TEARING_MODE            (0)     // Valid if using Arduino
 #endif
 
 #if LVGL_PORT_AVOID_TEARING_MODE != 0

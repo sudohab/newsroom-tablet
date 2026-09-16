@@ -325,3 +325,34 @@ die Zeichenbetriebsart.
 **Offen:** Das Display hängt am USB-Port des PCs. Das Panel zieht mit Backlight
 rund 450 mA, dazu Funkspitzen; ein schwacher Port bricht dabei kurz ein, was
 genau so aussieht. Gegentest mit einem 5-V/2-A-Netzteil steht aus.
+
+### 2026-09-17 – Das Flackern war eine Neustartschleife
+
+Hannes: „Auch mit Netzteil flackert es heftig." Damit war die Stromversorgung
+ausgeschlossen – und der Blick ins serielle Log zeigte den wahren Grund:
+
+```
+[I][Panel] Board begin success
+[I][LvPort] Initializing LVGL display driver
+E esp_core_dump_flash: Core dump write failed
+… und von vorn, im Sekundentakt
+```
+
+**Das Gerät stürzte beim Start von LVGL ab und startete neu – endlos.** Jeder
+Neustart baut das Bild neu auf; genau das sah aus wie heftiges Flackern.
+
+Ursache: zu wenig **interner** RAM. Der ESP32-S3 hat davon nur rund 320 KB, und
+ich hatte ihn zweimal hintereinander beschnitten – erst der große Bounce-Puffer
+(40 Zeilen = 128 KB), dann die vergrößerten LVGL-Zeichenpuffer (60 Zeilen =
+192 KB). Zusammen passte das nicht mehr, die Anlage schlug fehl, das Gerät
+stürzte ab.
+
+Jetzt: Bounce-Puffer 30 Zeilen (96 KB), LVGL-Puffer 20 Zeilen (64 KB). Am Gerät
+geprüft: **ein** Start in 30 Sekunden statt einer Schleife, 209 KB intern frei
+vor dem Start von LVGL, 95 KB danach, Abrufe laufen fehlerfrei.
+
+**Lehre:** Bei Anzeigeproblemen zuerst ins serielle Log sehen, ob das Gerät
+überhaupt durchläuft. Zwei Runden Feinabstimmung an Puffergrößen gingen drauf,
+weil ich das Sichtbare (Flackern) gedeutet habe, statt das Log zu lesen.
+Deshalb meldet das Gerät jetzt bei jedem Start, wie viel interner Speicher vor
+dem Start von LVGL frei ist.
