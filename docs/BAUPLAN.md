@@ -304,3 +304,24 @@ Boarddefinition die GPIOs 0–5, 7–10, 14, 17, 18, 21, 38–42, 45–48; dazu 
 wären also allenfalls 6, 11, 12, 13, 15 und 16 – wovon ein Teil auf dem Board
 für SD-Karte, CAN und RS485 verdrahtet ist. Vor einem Umbau muss der
 Schaltplan geprüft werden.
+
+### 2026-09-16 – Flackern, dritter Anlauf
+
+Hannes: „Sobald ich das Display berühre, dreht es völlig ab." Berühren heißt
+scrollen, und dabei ändert sich fast die ganze Fläche – der Hinweis zeigte auf
+die Zeichenbetriebsart.
+
+1. **Anti-Tearing Modus 3 → 2.** Im Direktmodus muss LVGL geänderte Bereiche in
+   *beide* Bildpuffer nachziehen; bei großen Änderungen kommt das nicht
+   hinterher. Modus 2 zeichnet jedes Bild einmal vollständig und schaltet es
+   als Ganzes um – dort kann das nicht passieren. Kostet 3 × 768 KB PSRAM.
+2. **HTTPS-Verbindung offen halten.** Bisher wurde für jede Abfrage eine neue
+   TLS-Verbindung aufgebaut: **1350 ms** gemessen, in denen zugleich der
+   Speicherbus belastet wird, an dem auch das Panel hängt – bei einer Abfrage
+   alle zwei Sekunden also die halbe Zeit. Mit offener Verbindung dauert
+   dieselbe Abfrage **20–30 ms**, gemessen am Gerät. Bricht die Verbindung, wird
+   sie beim nächsten Versuch neu aufgebaut.
+
+**Offen:** Das Display hängt am USB-Port des PCs. Das Panel zieht mit Backlight
+rund 450 mA, dazu Funkspitzen; ein schwacher Port bricht dabei kurz ein, was
+genau so aussieht. Gegentest mit einem 5-V/2-A-Netzteil steht aus.

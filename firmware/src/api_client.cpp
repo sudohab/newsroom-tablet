@@ -22,9 +22,14 @@ struct Collector {
     String etag;                 // Wert der Kopfzeile X-Screen-Hash
 };
 
+// Der Sammler der gerade laufenden Anfrage. Die Verbindung wird wiederverwendet
+// (siehe unten); ihr fest eingebautes user_data zeigt deshalb immer auf
+// dieselbe Stelle und taugt nicht, um die Antwort zuzuordnen.
+Collector *activeCollector = nullptr;
+
 esp_err_t onEvent(esp_http_client_event_t *evt) {
-    if (evt->user_data == nullptr) return ESP_OK;
-    auto *collector = static_cast<Collector *>(evt->user_data);
+    Collector *collector = activeCollector;
+    if (collector == nullptr) return ESP_OK;
 
     // Die Pruefsumme des Bildes kommt als Kopfzeile. Sie wird beim naechsten
     // Abruf zurueckgeschickt, damit der Pi unveraenderte Bilder nicht erneut
@@ -81,12 +86,32 @@ bool checkPath(const String &path) {
     return path.indexOf("..") < 0;
 }
 
+// Die offen gehaltene Verbindung zum Pi und die Adresse, für die sie gilt.
+//
+// Warum offen halten? Jeder Neuaufbau kostet einen kompletten
+// TLS-Handschlag – am Gerät gemessen rund eine Sekunde, in der zugleich der
+// Speicherbus belastet wird, an dem auch das Display hängt. Bei einer Abfrage
+// alle zwei Sekunden war das die halbe Zeit. Mit einer bestehenden Verbindung
+// dauert dieselbe Abfrage einen Bruchteil davon.
+esp_http_client_handle_t sharedClient = nullptr;
+String sharedHost;
+
+void closeClient() {
+    if (sharedClient != nullptr) {
+        esp_http_client_cleanup(sharedClient);
+        sharedClient = nullptr;
+        sharedHost = "";
+    }
+}
+
 Result request(const String &url, esp_http_client_method_t method, const String &body,
                bool withToken, uint8_t *buffer = nullptr, size_t capacity = 0,
                size_t *received = nullptr) {
     Result result;
 
     if (wifi_manager::state() != wifi_manager::State::Connected) {
+        // Ohne WLAN ist auch die offene Verbindung wertlos.
+        closeClient();
         result.error = "Kein WLAN";
         return result;
     }
@@ -95,9 +120,16 @@ Result request(const String &url, esp_http_client_method_t method, const String 
     collector.buffer = buffer;
     collector.capacity = capacity;
 
+    const String host = settings_store::apiHost();
+    if (sharedClient != nullptr && sharedHost != host) {
+        // Adresse in den Einstellungen geändert: alte Verbindung verwerfen.
+        closeClient();
+    }
+
     esp_http_client_config_t config = {};
     config.url = url.c_str();
     config.method = method;
+    config.keep_alive_enable = true;
     config.timeout_ms = cfg::kHttpTimeoutMs;
     config.event_handler = onEvent;
     config.user_data = &collector;
@@ -114,17 +146,26 @@ Result request(const String &url, esp_http_client_method_t method, const String 
     config.buffer_size = 2048;
     config.buffer_size_tx = 1024;
 
-    esp_http_client_handle_t client = esp_http_client_init(&config);
+    if (sharedClient == nullptr) {
+        sharedClient = esp_http_client_init(&config);
+        sharedHost = host;
+    }
+    esp_http_client_handle_t client = sharedClient;
     if (client == nullptr) {
         result.error = "Verbindung nicht moeglich";
         return result;
     }
+    // Bei einer wiederverwendeten Verbindung müssen Ziel und Verfahren neu
+    // gesetzt werden – die Verbindung selbst bleibt bestehen.
+    esp_http_client_set_url(client, url.c_str());
+    esp_http_client_set_method(client, method);
+    activeCollector = &collector;
 
     String token;
     if (withToken) {
         token = settings_store::apiToken();
         if (token.isEmpty()) {
-            esp_http_client_cleanup(client);
+            activeCollector = nullptr;
             result.error = "Kein Geraete-Token hinterlegt";
             return result;
         }
@@ -135,6 +176,9 @@ Result request(const String &url, esp_http_client_method_t method, const String 
     if (!body.isEmpty()) {
         esp_http_client_set_header(client, "Content-Type", "application/json");
         esp_http_client_set_post_field(client, body.c_str(), body.length());
+    } else {
+        // Sonst hinge der Körper der vorigen Anfrage noch an der Verbindung.
+        esp_http_client_set_post_field(client, nullptr, 0);
     }
 
     const esp_err_t err = esp_http_client_perform(client);
@@ -184,7 +228,11 @@ Result request(const String &url, esp_http_client_method_t method, const String 
         else                                  result.error = "Verbindung fehlgeschlagen";
     }
 
-    esp_http_client_cleanup(client);
+    activeCollector = nullptr;
+    // Nach einem echten Verbindungsfehler ist die offene Verbindung nicht mehr
+    // zu gebrauchen – beim nächsten Versuch wird sie neu aufgebaut. Nach einer
+    // gültigen HTTP-Antwort bleibt sie bestehen.
+    if (err != ESP_OK && status <= 0) closeClient();
     // Der Token soll nicht länger als nötig im Speicher stehen.
     if (!token.isEmpty()) {
         memset(&token[0], 0, token.length());
