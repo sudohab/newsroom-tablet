@@ -151,6 +151,23 @@ Am Gerät gelernte Stolpersteine (alle in den Dateien kommentiert):
   im internen RAM). Wenn beim Wischen Streifen sichtbar werden, ist der
   nächste Schritt `LVGL_PORT_AVOID_TEARING_MODE = 3` mit Bounce-Buffer.
 
-**Offen am Gerät:** Die WLAN-Verbindung zu „Wifi9G" scheitert bisher
-(`Verbindung fehlgeschlagen`) – Passwort am Bildschirm neu eingeben. Bei den
-Matrix-Uhren war ein Tippfehler im Passwort die Ursache.
+**WLAN, am Gerät geklärt:** Die Verbindung steht (IP 192.168.178.116). Drei
+Punkte, die dabei herauskamen:
+
+* **5 GHz gibt es für dieses Gerät nicht.** Der ESP32-S3 funkt ausschließlich
+  auf 2,4 GHz; ein 5-GHz-Netz taucht in der Netzliste gar nicht erst auf. Was
+  in der Liste steht, ist also immer 2,4 GHz – die Frage „welches ist welches"
+  stellt sich am Tablet nicht.
+* **Ständiges Neuverbinden:** Nach dem erfolgreichen Verbinden ging die
+  Verbindung sofort wieder verloren und wurde neu aufgebaut – im Sekundentakt.
+  Ursache war die Logik hier: Schon ein einziger Statusabruf ungleich
+  „verbunden" löste einen kompletten Neuaufbau aus. Jetzt gilt die Verbindung
+  erst nach **5 Sekunden** ohne Lebenszeichen als verloren; kurze Aussetzer
+  (z. B. ein Kanalwechsel des Routers) überbrückt das Gerät.
+* **Länderkennung DE** gesetzt (`esp_wifi_set_country_code("DE", true)`): In
+  der weltweiten Voreinstellung tut sich das Funkmodul mit den Kanälen 12 und
+  13 schwer, die eine Fritz!Box automatisch wählen kann.
+* **Abbruchgründe werden jetzt übersetzt:** Ein Ereignis-Rückruf schreibt den
+  Grundcode des Funkmoduls als Klartext ins Log und auf den Bildschirm
+  („Passwort falsch (kein Schlüsseltausch)", „Netz nicht gefunden", „Signal zu
+  schwach") – sonst sieht man nur „hat nicht geklappt".

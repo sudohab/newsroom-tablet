@@ -13,8 +13,53 @@ State current = State::Idle;
 uint32_t connectStartedMs = 0;
 uint32_t nextRetryMs = 0;
 uint32_t retryDelayMs = 5000;  // wächst bei wiederholtem Fehlschlag
+uint32_t lostSinceMs = 0;      // seit wann die Verbindung weg ist (0 = steht)
 std::function<void(const std::vector<Network> &)> scanCallback;
 bool scanRunning = false;
+// Letzter Abbruchgrund des Funkmoduls – als Klartext für die Anzeige.
+String lastReason;
+
+// Übersetzt den Zahlencode, den das Funkmodul beim Trennen meldet, in einen
+// Satz, mit dem man etwas anfangen kann. Die Codes stehen in esp_wifi_types.h;
+// hier sind die Fälle aufgeführt, die bei einem Heimnetz vorkommen.
+String reasonText(uint8_t reason) {
+    switch (reason) {
+        case WIFI_REASON_AUTH_EXPIRE:
+        case WIFI_REASON_AUTH_FAIL:
+        case WIFI_REASON_HANDSHAKE_TIMEOUT:
+            return "Passwort abgelehnt";
+        case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT:
+            // Klassiker: Das Passwort ist falsch – der Router antwortet dann
+            // beim Schlüsseltausch einfach nicht mehr.
+            return "Passwort falsch (kein Schluesseltausch)";
+        case WIFI_REASON_NO_AP_FOUND:
+            return "Netz nicht gefunden (5 GHz? falscher Kanal?)";
+        case WIFI_REASON_ASSOC_FAIL:
+        case WIFI_REASON_ASSOC_EXPIRE:
+        case WIFI_REASON_NOT_ASSOCED:
+            return "Router hat die Anmeldung abgelehnt";
+        case WIFI_REASON_BEACON_TIMEOUT:
+            return "Funkverbindung abgerissen (Signal zu schwach?)";
+        case WIFI_REASON_CONNECTION_FAIL:
+            return "Verbindungsaufbau fehlgeschlagen";
+        default:
+            return "Grund " + String(reason);
+    }
+}
+
+// Ereignisse des Funkmoduls mitschreiben. Ohne diesen Rückruf sieht man nur
+// "hat nicht geklappt", nicht aber warum – und genau der Grund entscheidet,
+// ob es am Passwort, am Kanal oder am Signal liegt.
+void onWifiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
+    if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
+        const uint8_t reason = info.wifi_sta_disconnected.reason;
+        lastReason = reasonText(reason);
+        Serial.printf("[wifi] getrennt: %s (Code %u)\n", lastReason.c_str(), reason);
+    } else if (event == ARDUINO_EVENT_WIFI_STA_CONNECTED) {
+        lastReason = "";
+        Serial.printf("[wifi] angemeldet, Kanal %u\n", info.wifi_sta_connected.channel);
+    }
+}
 
 // Verbindungsversuch mit den gespeicherten Daten starten.
 void startConnect() {
@@ -36,6 +81,12 @@ void startConnect() {
 
 void begin() {
     WiFi.mode(WIFI_STA);
+    WiFi.onEvent(onWifiEvent);
+    // Länderkennung Deutschland: Hier sind die Funkkanäle 1 bis 13 erlaubt.
+    // Ohne diese Angabe arbeitet das Funkmodul in einer weltweit sicheren
+    // Voreinstellung und tut sich mit den Kanälen 12 und 13 schwer – die eine
+    // Fritz!Box durchaus automatisch wählt.
+    esp_wifi_set_country_code("DE", true);
     // Kein eigener Hotspot, keine Verbindungsdaten im WLAN-Stack speichern:
     // Die Zugangsdaten verwaltet ausschließlich settings_store, damit es nur
     // einen Ort gibt, an dem sie stehen (und gelöscht werden können).
@@ -99,9 +150,20 @@ void loop() {
 
         case State::Connected:
             if (WiFi.status() != WL_CONNECTED) {
-                Serial.println("[wifi] Verbindung verloren");
-                current = State::Failed;
-                nextRetryMs = millis() + 2000;
+                // Nicht sofort neu verbinden: Ein kurzer Aussetzer (der Router
+                // funkt z. B. gerade einen Kanalwechsel) verschwindet oft von
+                // selbst. Ein sofortiger Neuaufbau würde die Verbindung erst
+                // recht abreißen lassen und sich endlos wiederholen.
+                if (lostSinceMs == 0) {
+                    lostSinceMs = millis();
+                } else if (millis() - lostSinceMs > 5000) {
+                    Serial.println("[wifi] Verbindung verloren");
+                    current = State::Failed;
+                    lostSinceMs = 0;
+                    nextRetryMs = millis() + 2000;
+                }
+            } else {
+                lostSinceMs = 0;
             }
             break;
 
@@ -121,7 +183,9 @@ String statusText() {
         case State::Idle:       return "WLAN nicht eingerichtet";
         case State::Connecting: return "WLAN verbindet ...";
         case State::Connected:  return "WLAN verbunden (" + WiFi.localIP().toString() + ")";
-        case State::Failed:     return "WLAN nicht erreichbar";
+        case State::Failed:
+            return lastReason.isEmpty() ? "WLAN nicht erreichbar"
+                                        : "WLAN: " + lastReason;
     }
     return "";
 }
