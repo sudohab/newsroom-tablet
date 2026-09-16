@@ -78,6 +78,16 @@ void setup() {
     auto lcd = board->getLCD();
     auto lcdBus = lcd->getBus();
     if (lcdBus->getBasicAttributes().type == ESP_PANEL_BUS_TYPE_RGB) {
+        // Pixeltakt 21 MHz statt der 16 MHz aus der Bibliotheksvorlage.
+        //
+        // Aus dem Takt ergibt sich die Bildwiederholrate: Eine Zeile umfasst
+        // 800 sichtbare Pixel plus 20 Austastpixel, ein Bild 480 Zeilen plus
+        // 20. Bei 16 MHz sind das 16.000.000 / (820 x 500) = 39 Bilder je
+        // Sekunde - unter etwa 50 sieht das Auge das Flimmern. Mit 21 MHz sind
+        // es 51 Bilder je Sekunde. 21 MHz ist auch der Wert aus Waveshares
+        // eigenem Beispiel fuer dieses Board.
+        static_cast<BusRGB *>(lcdBus)->configRGB_FreqHz(21 * 1000 * 1000);
+
         // 30 Zeilen; die Groesse muss die Bildhoehe glatt teilen
         // (800 x 30 Pixel x 16 = 800 x 480). Zwei solche Puffer belegen
         // zusammen 96 KB internen RAM - mehr vertraegt das Geraet nicht,
