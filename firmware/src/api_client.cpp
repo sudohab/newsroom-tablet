@@ -11,15 +11,46 @@
 namespace api_client {
 namespace {
 
-// Sammelt die Antwort in einem String und bricht ab, wenn sie zu groß wird.
+// Nimmt die Antwort entgegen – entweder als Text (JSON) oder direkt in einen
+// vorgegebenen Puffer (Bilddaten). Zu viel wird verworfen, nie überschrieben.
 struct Collector {
     String body;
     bool truncated = false;
+    uint8_t *buffer = nullptr;   // nullptr = Text sammeln
+    size_t capacity = 0;
+    size_t received = 0;
+    String etag;                 // Wert der Kopfzeile X-Screen-Hash
 };
 
 esp_err_t onEvent(esp_http_client_event_t *evt) {
-    if (evt->event_id != HTTP_EVENT_ON_DATA || evt->user_data == nullptr) return ESP_OK;
+    if (evt->user_data == nullptr) return ESP_OK;
     auto *collector = static_cast<Collector *>(evt->user_data);
+
+    // Die Pruefsumme des Bildes kommt als Kopfzeile. Sie wird beim naechsten
+    // Abruf zurueckgeschickt, damit der Pi unveraenderte Bilder nicht erneut
+    // uebertraegt.
+    if (evt->event_id == HTTP_EVENT_ON_HEADER) {
+        if (evt->header_key != nullptr && evt->header_value != nullptr
+                && strcasecmp(evt->header_key, "X-Screen-Hash") == 0) {
+            String value = evt->header_value;
+            if (value.length() <= 64) collector->etag = value;
+        }
+        return ESP_OK;
+    }
+    if (evt->event_id != HTTP_EVENT_ON_DATA) return ESP_OK;
+
+    if (collector->buffer != nullptr) {
+        if (collector->received + evt->data_len > collector->capacity) {
+            // Mehr Daten als erwartet: abbrechen statt über den Puffer hinaus
+            // zu schreiben. Das Bild wird dann verworfen.
+            collector->truncated = true;
+            return ESP_OK;
+        }
+        memcpy(collector->buffer + collector->received, evt->data, evt->data_len);
+        collector->received += evt->data_len;
+        return ESP_OK;
+    }
+
     if (collector->body.length() + evt->data_len > kMaxBody) {
         collector->truncated = true;
         return ESP_OK;  // Rest verwerfen, Verbindung sauber zu Ende führen
@@ -51,7 +82,8 @@ bool checkPath(const String &path) {
 }
 
 Result request(const String &url, esp_http_client_method_t method, const String &body,
-               bool withToken) {
+               bool withToken, uint8_t *buffer = nullptr, size_t capacity = 0,
+               size_t *received = nullptr) {
     Result result;
 
     if (wifi_manager::state() != wifi_manager::State::Connected) {
@@ -60,6 +92,8 @@ Result request(const String &url, esp_http_client_method_t method, const String 
     }
 
     Collector collector;
+    collector.buffer = buffer;
+    collector.capacity = capacity;
 
     esp_http_client_config_t config = {};
     config.url = url.c_str();
@@ -114,7 +148,15 @@ Result request(const String &url, esp_http_client_method_t method, const String 
     if (err == ESP_OK || status > 0) {
         result.status = status;
         result.body = collector.body;
+        if (received != nullptr) *received = collector.received;
+        result.etag = collector.etag;
         result.ok = result.status >= 200 && result.status < 300;
+        // Ein abgeschnittenes Bild ist unbrauchbar – lieber als Fehler melden
+        // als eine halbe Anzeige zu zeichnen.
+        if (result.ok && collector.truncated) {
+            result.ok = false;
+            result.error = "Antwort zu gross";
+        }
         if (!result.ok) {
             // Die Antwort des Servers gekuerzt ins Log. Der Text ist fuer
             // Menschen gedacht ("Sitzung abgelaufen", "Sender nicht
@@ -125,7 +167,8 @@ Result request(const String &url, esp_http_client_method_t method, const String 
             Serial.printf("[api] Status %d: %s\n", result.status, excerpt.c_str());
             // Klartext für die Anzeige. Der Server liefert absichtlich keine
             // Einzelheiten, also übersetzen wir die üblichen Fälle selbst.
-            if (result.status == 401) result.error = "Token abgelehnt";
+            if (result.status == 304) result.error = "";  // unveraendert, kein Fehler
+            else if (result.status == 401) result.error = "Token abgelehnt";
             else if (result.status == 429) result.error = "Zu viele Anfragen";
             else result.error = "Server meldet " + String(result.status);
         }
@@ -170,6 +213,29 @@ Result get(const String &path) {
     }
     return request(buildUrl(path), HTTP_METHOD_GET, "", true);
 }
+
+Result getBinary(const String &path, const String &query,
+                 uint8_t *buffer, size_t capacity, size_t &received) {
+    received = 0;
+    Result result;
+    if (!checkPath(path)) {
+        result.error = "Ungueltiger Pfad";
+        return result;
+    }
+    // Der Anhang wird selbst gebaut, nie aus einer Server-Antwort übernommen.
+    for (size_t i = 0; i < query.length(); ++i) {
+        const char c = query[i];
+        const bool ok = isAlphaNumeric(c) || c == '=' || c == '&' || c == '-' || c == '_';
+        if (!ok) {
+            result.error = "Ungueltige Abfrage";
+            return result;
+        }
+    }
+    String url = buildUrl(path);
+    if (!query.isEmpty()) url += "?" + query;
+    return request(url, HTTP_METHOD_GET, "", true, buffer, capacity, &received);
+}
+
 
 Result postJson(const String &path, const String &json) {
     Result result;

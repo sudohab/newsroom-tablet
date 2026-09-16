@@ -18,6 +18,7 @@ struct Result {
     int status = 0;         // HTTP-Status, 0 wenn die Verbindung scheiterte
     String error;           // Klartext für die Anzeige, nie Token-Inhalte
     String body;            // Antworttext (auf kMaxBody begrenzt)
+    String etag;            // Kopfzeile X-Screen-Hash, falls der Server eine schickt
 };
 
 // Obergrenze für Antworten. Ein fehlerhafter oder bösartiger Server soll den
@@ -36,5 +37,16 @@ Result get(const String &path);
 
 // POST mit JSON-Körper auf die Tablet-Schnittstelle, mit Geräte-Token.
 Result postJson(const String &path, const String &json);
+
+// GET für Binärdaten (die Newsroom-Ansicht als Bild): schreibt direkt in einen
+// bereitgestellten Puffer, statt die Daten erst in einem String zu sammeln.
+// 48.000 Byte zweimal im Speicher zu halten wäre auf einem Mikrocontroller
+// unnötig verschwenderisch.
+//
+// `query` wird an den Pfad gehängt (z. B. "hash=abc") und muss aus einfachen
+// Zeichen bestehen. `received` enthält danach die Anzahl gelesener Bytes.
+// Status 304 bedeutet: unverändert, der Puffer wurde nicht angefasst.
+Result getBinary(const String &path, const String &query,
+                 uint8_t *buffer, size_t capacity, size_t &received);
 
 }  // namespace api_client

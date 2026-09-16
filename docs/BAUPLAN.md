@@ -115,7 +115,8 @@ läuft ab und lässt sich in der Weboberfläche einzeln zurückziehen.
 |---|---|---|
 | 1 | Firmware-Grundgerüst: Panel, Touch, Backlight, WLAN-Einrichtung, TLS-Test gegen den Pi, Uhr auf dem Schirm | **fertig, auf dem Gerät** |
 | 2 | Server: `app/tablets.py` + `app/tablet_api.py` (Token, Status, Konfiguration, Aktions-Allowlist) inkl. Tests | **fertig im Repo newsroom21** |
-| 3 | Firmware: Startseite (Uhr, Weckzeit, Wetter, Snooze, Lautstärke) an der echten API | offen |
+| 3 | Firmware: Startseite (Uhr, Weckzeit, Wetter, Snooze, Lautstärke) an der echten API | **fertig, auf dem Gerät** |
+| 3b | Newsroom-Ansicht (orbital) als Bild vom Pi | Firmware fertig, Server-Teil noch nicht auf dem Pi |
 | 4 | Firmware: Radio-Seite (Favoriten, Start/Stop, Sleeptimer) | offen |
 | 5 | Firmware: Podcast-Seite (Abos, Episoden, Start/Pause) | offen |
 | 6 | Firmware: eigene Einstellungsseite auf dem Gerät | offen |
@@ -206,3 +207,31 @@ Schnittstelle `/api/tablet/*` gebaut, 21 neue Tests, gesamte Testsuite grün
 2. `sudo scripts/secrets.sh` → „9) Tablet-Token erzeugen" → Token notieren
 3. In `/opt/newsroom21/.env` `compose.tablet.yaml` an `COMPOSE_FILE` anhängen
 4. `sudo docker compose up -d`
+
+### 2026-09-16 – Etappe 3b: die orbitale Ansicht
+
+Hannes wollte die orbitale Ansicht aus newsroom21 auch auf dem Tablet. Sie
+wird **nicht** nachgebaut: `app/display/renderer.py` zeichnet sie bereits für
+das E-Ink – in genau 800×480, der Auflösung des Tablets. Ein zweiter Nachbau
+in der Firmware würde nach der ersten Änderung anders aussehen als das
+Original.
+
+* **Server:** `GET /api/tablet/screen` liefert das Bild mit **einem Bit je
+  Pixel** (48.000 Byte, feste Größe). Gemessen sind nur 466 von 384.000
+  Pixeln Graustufen (Kantenglättung), Schwarzweiß verliert also nichts. Ein
+  PNG wäre kleiner, bräuchte aber einen Decoder und Platz für das entpackte
+  Bild im Gerät.
+* **Sparsam:** Das Tablet schickt die Prüfsumme des Bildes mit, das es schon
+  zeigt; unverändert antwortet der Pi mit `304` ohne Daten. Gezeichnet wird
+  höchstens alle fünf Sekunden, je Design einmal für alle Geräte.
+* **Firmware:** Der Puffer liegt im PSRAM (48 KB wären ein Drittel des freien
+  internen Speichers) und wird von LVGL direkt als 1-Bit-Bild gelesen – keine
+  Umwandlung, keine zweite Kopie.
+* **Bedienung:** Die Ansicht ist die Startseite. Ein Tipp darauf führt zur
+  Bedienseite, der Knopf „Ansicht" wieder zurück.
+* Welche Ansicht ein Gerät zeigt, ist eine Einstellung je Tablet
+  (`screen_theme`: orbital, mission_control, classic, off).
+
+**Am Gerät geprüft:** Firmware läuft, fragt den Endpunkt ab – und bekommt
+`404`, weil der Server-Teil noch nicht auf dem Pi ist. Nach dem nächsten
+Bundle sollte das Bild erscheinen.

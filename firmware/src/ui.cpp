@@ -9,6 +9,7 @@
 #include "lvgl_port/lvgl_v8_port.h"
 #include "settings_store.h"
 #include "tablet_config.h"
+#include "screen_view.h"
 #include "tablet_state.h"
 #include "wifi_manager.h"
 
@@ -24,8 +25,14 @@ constexpr uint32_t kColorAlarm = 0xd64545;
 constexpr uint32_t kColorAccent = 0x2f6fd0;
 
 // --- Seiten -----------------------------------------------------------------
+// screenNewsroom zeigt die Ansicht, die der Pi zeichnet (orbital & Co.) und
+// ist die Startseite. Ein Tipp darauf führt zur Bedienseite; von dort geht es
+// mit "Zurueck" wieder zurück. So bleibt der Blick im Alltag auf der Ansicht,
+// die Bedienung ist aber immer nur eine Berührung entfernt.
+lv_obj_t *screenNewsroom = nullptr;
 lv_obj_t *screenHome = nullptr;
 lv_obj_t *screenWifi = nullptr;
+bool newsroomAvailable = false;
 
 // Startseite
 lv_obj_t *labelClock = nullptr;
@@ -105,6 +112,14 @@ void onAlarmOffClicked(lv_event_t *) {
 
 void onVolumeUpClicked(lv_event_t *) { pending = Pending::VolumeUp; }
 void onVolumeDownClicked(lv_event_t *) { pending = Pending::VolumeDown; }
+
+void onNewsroomClicked(lv_event_t *) {
+    lv_scr_load(screenHome);
+}
+
+void onShowNewsroomClicked(lv_event_t *) {
+    if (newsroomAvailable) lv_scr_load(screenNewsroom);
+}
 
 void onWifiPageClicked(lv_event_t *) {
     lv_scr_load(screenWifi);
@@ -198,6 +213,8 @@ void buildHomeScreen() {
     makeButton(screenHome, "Lauter", onVolumeUpClicked, 150, 70,
                LV_ALIGN_BOTTOM_LEFT, 310, -30);
 
+    makeButton(screenHome, "Ansicht", onShowNewsroomClicked, 150, 70,
+               LV_ALIGN_BOTTOM_RIGHT, -210, -30);
     makeButton(screenHome, "WLAN", onWifiPageClicked, 150, 70,
                LV_ALIGN_BOTTOM_RIGHT, -40, -30);
 
@@ -206,6 +223,20 @@ void buildHomeScreen() {
                             LV_ALIGN_TOP_RIGHT, -40, 150);
     labelMessage = makeLabel(screenHome, &lv_font_montserrat_20, kColorMuted,
                              LV_ALIGN_TOP_RIGHT, -40, 180);
+}
+
+void buildNewsroomScreen() {
+    screenNewsroom = lv_obj_create(nullptr);
+    // Weiß, weil die Ansicht für E-Ink gezeichnet ist: schwarze Schrift auf
+    // weißem Grund. Ein dunkler Rand ringsum sähe aus wie ein Fehler.
+    lv_obj_set_style_bg_color(screenNewsroom, lv_color_hex(0xffffff), 0);
+    lv_obj_set_style_pad_all(screenNewsroom, 0, 0);
+    lv_obj_clear_flag(screenNewsroom, LV_OBJ_FLAG_SCROLLABLE);
+
+    newsroomAvailable = screen_view::begin(screenNewsroom);
+    if (newsroomAvailable) {
+        lv_obj_add_event_cb(screen_view::image(), onNewsroomClicked, LV_EVENT_CLICKED, nullptr);
+    }
 }
 
 void buildWifiScreen() {
@@ -324,13 +355,19 @@ void begin() {
     lvgl_port_lock(-1);
     buildHomeScreen();
     buildWifiScreen();
-    lv_scr_load(screenHome);
+    buildNewsroomScreen();
+    // Die Newsroom-Ansicht ist die Startseite, solange sie verfügbar ist.
+    lv_scr_load(newsroomAvailable ? screenNewsroom : screenHome);
     applySnapshot();
     lvgl_port_unlock();
 }
 
 void tick() {
     const uint32_t now = millis();
+
+    // Das Bild nur holen, während die Ansicht tatsächlich zu sehen ist –
+    // 48 KB für eine Seite, die niemand ansieht, wären verschwendet.
+    screen_view::loop(newsroomAvailable && lv_scr_act() == screenNewsroom);
 
     if (now - lastClockUpdateMs > 1000) {
         lastClockUpdateMs = now;
