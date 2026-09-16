@@ -127,8 +127,9 @@ Result request(const String &url, esp_http_client_method_t method, const String 
         // Für die Anzeige reicht eine verständliche Meldung; die Einzelheit
         // steht nur im seriellen Log.
         Serial.printf("[api] Fehler: %s\n", esp_err_to_name(err));
-        result.error = (err == ESP_ERR_HTTP_CONNECT) ? "Pi nicht erreichbar"
-                                                     : "Verbindung fehlgeschlagen";
+        if (err == ESP_ERR_HTTP_CONNECT)      result.error = "Pi nicht erreichbar";
+        else if (err == ESP_ERR_HTTP_EAGAIN)  result.error = "Pi antwortet nicht rechtzeitig";
+        else                                  result.error = "Verbindung fehlgeschlagen";
     }
 
     esp_http_client_cleanup(client);
