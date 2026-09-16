@@ -74,7 +74,11 @@
 #define LVGL_PORT_AVOID_TEARING_MODE            (CONFIG_LVGL_PORT_AVOID_TEARING_MODE)
                                                         // Valid if using ESP-IDF
 #else
-#define LVGL_PORT_AVOID_TEARING_MODE            (0)     // Valid if using Arduino
+// newsroom-tablet: 3 = Doppelpuffer im PSRAM + LVGL-Direktmodus. Ohne diese
+// Einstellung zeichnet LVGL in zwei kleine Streifenpuffer und schiebt sie
+// waehrend des laufenden Bildaufbaus ins Panel - das sieht man als Flackern
+// und Reissen. Kostet 2 x 768 KB PSRAM (von 8 MB).
+#define LVGL_PORT_AVOID_TEARING_MODE            (3)     // Valid if using Arduino
 #endif
 
 #if LVGL_PORT_AVOID_TEARING_MODE != 0

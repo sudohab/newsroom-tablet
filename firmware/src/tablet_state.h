@@ -33,6 +33,19 @@ struct Snapshot {
     // Anruf (nur während es klingelt)
     String callText;
 
+    // Termine und Nachrichten für die beiden Spalten der Ansicht
+    struct Event {
+        String title;
+        String when;   // "Do 18.9."
+        String time;   // "09:30", leer bei ganztägig
+    };
+    struct Headline {
+        String title;
+        String source;
+    };
+    std::vector<Event> events;
+    std::vector<Headline> news;
+
     // Medien
     String mediaState;            // "playing", "stopped", …
     String mediaTitle;

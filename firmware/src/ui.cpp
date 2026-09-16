@@ -23,6 +23,8 @@ constexpr uint32_t kColorText = 0xffffff;
 constexpr uint32_t kColorMuted = 0x9aa4b2;
 constexpr uint32_t kColorAlarm = 0xd64545;
 constexpr uint32_t kColorAccent = 0x2f6fd0;
+constexpr uint32_t kColorAccentText = 0x6ea8ff;   // Spaltenüberschriften
+constexpr uint32_t kColorLine = 0x2a2f3a;         // Trennlinien
 
 // --- Seiten -----------------------------------------------------------------
 // screenNewsroom zeigt die Ansicht, die der Pi zeichnet (orbital & Co.) und
@@ -40,7 +42,6 @@ lv_obj_t *labelClock = nullptr;
 lv_obj_t *labelDate = nullptr;
 lv_obj_t *labelWeather = nullptr;
 lv_obj_t *labelAlarm = nullptr;
-lv_obj_t *labelMedia = nullptr;
 lv_obj_t *labelVolume = nullptr;
 lv_obj_t *labelStatus = nullptr;
 lv_obj_t *labelMessage = nullptr;
@@ -48,8 +49,13 @@ lv_obj_t *bannerCall = nullptr;
 lv_obj_t *labelCall = nullptr;
 lv_obj_t *btnSnooze = nullptr;
 lv_obj_t *btnAlarmOff = nullptr;
+lv_obj_t *btnNewsroom = nullptr;
+lv_obj_t *listEvents = nullptr;
+lv_obj_t *listNews = nullptr;
+lv_obj_t *labelMedia = nullptr;
 
 // Radio-Seite
+lv_obj_t *labelNewsroomHint = nullptr;
 lv_obj_t *listStations = nullptr;
 lv_obj_t *labelRadioStatus = nullptr;
 std::vector<tablet_state::Station> stations;
@@ -215,65 +221,95 @@ void onConnectClicked(lv_event_t *) {
 void buildHomeScreen() {
     screenHome = lv_obj_create(nullptr);
     lv_obj_set_style_bg_color(screenHome, lv_color_hex(kColorBackground), 0);
+    lv_obj_clear_flag(screenHome, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Uhrzeit und Datum, groß genug zum Ablesen aus dem Bett
+    // --- Kopfzeile: Uhr, Datum, Weckruf, Wetter ---------------------------
     labelClock = makeLabel(screenHome, &lv_font_montserrat_48, kColorText,
-                           LV_ALIGN_TOP_LEFT, 40, 30, "--:--");
+                           LV_ALIGN_TOP_LEFT, 30, 14, "--:--");
     labelDate = makeLabel(screenHome, &lv_font_montserrat_20, kColorMuted,
-                          LV_ALIGN_TOP_LEFT, 40, 95, cfg::kDeviceName);
-
-    // Wetter rechts oben
+                          LV_ALIGN_TOP_LEFT, 210, 22, cfg::kDeviceName);
+    labelAlarm = makeLabel(screenHome, &lv_font_montserrat_20, kColorText,
+                           LV_ALIGN_TOP_LEFT, 210, 52, "Weckruf --");
     labelWeather = makeLabel(screenHome, &lv_font_montserrat_28, kColorText,
-                             LV_ALIGN_TOP_RIGHT, -40, 40);
+                             LV_ALIGN_TOP_RIGHT, -30, 20);
+    labelStatus = makeLabel(screenHome, &lv_font_montserrat_20, kColorMuted,
+                            LV_ALIGN_TOP_RIGHT, -30, 60);
 
-    // Nächster Weckruf
-    labelAlarm = makeLabel(screenHome, &lv_font_montserrat_36, kColorText,
-                           LV_ALIGN_TOP_LEFT, 40, 150, "Weckzeit: --");
+    // Trennlinie unter der Kopfzeile
+    lv_obj_t *headerLine = lv_obj_create(screenHome);
+    lv_obj_set_size(headerLine, 740, 2);
+    lv_obj_align(headerLine, LV_ALIGN_TOP_MID, 0, 104);
+    lv_obj_set_style_bg_color(headerLine, lv_color_hex(kColorLine), 0);
+    lv_obj_set_style_border_width(headerLine, 0, 0);
 
-    // Was gerade läuft (Radio/Podcast)
-    labelMedia = makeLabel(screenHome, &lv_font_montserrat_20, kColorMuted,
-                           LV_ALIGN_TOP_LEFT, 40, 205);
+    // --- Spalte links: Termine -------------------------------------------
+    makeLabel(screenHome, &lv_font_montserrat_20, kColorAccentText,
+              LV_ALIGN_TOP_LEFT, 30, 118, "TERMINE");
+    listEvents = lv_obj_create(screenHome);
+    lv_obj_set_size(listEvents, 350, 240);
+    lv_obj_align(listEvents, LV_ALIGN_TOP_LEFT, 30, 146);
+    lv_obj_set_style_bg_opa(listEvents, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(listEvents, 0, 0);
+    lv_obj_set_style_pad_all(listEvents, 0, 0);
+    // Untereinander, mit etwas Luft dazwischen
+    lv_obj_set_flex_flow(listEvents, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_row(listEvents, 10, 0);
+    lv_obj_clear_flag(listEvents, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Anrufbanner – nur sichtbar, solange es klingelt
+    // Senkrechte Trennlinie zwischen den Spalten
+    lv_obj_t *columnLine = lv_obj_create(screenHome);
+    lv_obj_set_size(columnLine, 2, 240);
+    lv_obj_align(columnLine, LV_ALIGN_TOP_LEFT, 399, 146);
+    lv_obj_set_style_bg_color(columnLine, lv_color_hex(kColorLine), 0);
+    lv_obj_set_style_border_width(columnLine, 0, 0);
+
+    // --- Spalte rechts: Nachrichten ---------------------------------------
+    makeLabel(screenHome, &lv_font_montserrat_20, kColorAccentText,
+              LV_ALIGN_TOP_LEFT, 420, 118, "NACHRICHTEN");
+    listNews = lv_obj_create(screenHome);
+    lv_obj_set_size(listNews, 350, 240);
+    lv_obj_align(listNews, LV_ALIGN_TOP_LEFT, 420, 146);
+    lv_obj_set_style_bg_opa(listNews, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(listNews, 0, 0);
+    lv_obj_set_style_pad_all(listNews, 0, 0);
+    lv_obj_set_flex_flow(listNews, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_row(listNews, 10, 0);
+    lv_obj_clear_flag(listNews, LV_OBJ_FLAG_SCROLLABLE);
+
+    // --- Fußzeile: Bedienung ---------------------------------------------
+    btnSnooze = makeButton(screenHome, "Schlummern", onSnoozeClicked, 180, 66,
+                           LV_ALIGN_BOTTOM_LEFT, 30, -14, kColorAccent);
+    btnAlarmOff = makeButton(screenHome, "Aus", onAlarmOffClicked, 90, 66,
+                             LV_ALIGN_BOTTOM_LEFT, 220, -14, kColorAlarm);
+    makeButton(screenHome, "-", onVolumeDownClicked, 66, 66,
+               LV_ALIGN_BOTTOM_LEFT, 325, -14);
+    labelVolume = makeLabel(screenHome, &lv_font_montserrat_28, kColorText,
+                            LV_ALIGN_BOTTOM_LEFT, 400, -30, "--%");
+    makeButton(screenHome, "+", onVolumeUpClicked, 66, 66,
+               LV_ALIGN_BOTTOM_LEFT, 475, -14);
+    makeButton(screenHome, "Radio", onRadioPageClicked, 110, 66,
+               LV_ALIGN_BOTTOM_RIGHT, -150, -14);
+    makeButton(screenHome, "WLAN", onWifiPageClicked, 110, 66,
+               LV_ALIGN_BOTTOM_RIGHT, -30, -14);
+    btnNewsroom = makeButton(screenHome, "Ansicht", onShowNewsroomClicked, 110, 66,
+                             LV_ALIGN_BOTTOM_RIGHT, -270, -14);
+
+    labelMessage = makeLabel(screenHome, &lv_font_montserrat_20, kColorMuted,
+                             LV_ALIGN_BOTTOM_MID, 0, -92);
+
+    // --- Anrufbanner: liegt über allem und ist sonst unsichtbar ------------
     bannerCall = lv_obj_create(screenHome);
-    lv_obj_set_size(bannerCall, 720, 70);
-    lv_obj_align(bannerCall, LV_ALIGN_TOP_MID, 0, 240);
+    lv_obj_set_size(bannerCall, 800, 120);
+    lv_obj_align(bannerCall, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_style_bg_color(bannerCall, lv_color_hex(kColorAccent), 0);
     lv_obj_set_style_border_width(bannerCall, 0, 0);
+    lv_obj_set_style_radius(bannerCall, 0, 0);
     lv_obj_clear_flag(bannerCall, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(bannerCall, LV_OBJ_FLAG_HIDDEN);
     labelCall = lv_label_create(bannerCall);
-    lv_obj_set_style_text_font(labelCall, &lv_font_montserrat_28, 0);
+    lv_obj_set_style_text_font(labelCall, &lv_font_montserrat_36, 0);
     lv_obj_set_style_text_color(labelCall, lv_color_hex(kColorText), 0);
     lv_obj_center(labelCall);
-
-    // Bedienung: Schlummern und Wecker aus stehen groß und weit auseinander –
-    // halb wach trifft man keine kleinen Knöpfe.
-    btnSnooze = makeButton(screenHome, "Schlummern", onSnoozeClicked, 260, 90,
-                           LV_ALIGN_BOTTOM_LEFT, 40, -120, kColorAccent);
-    btnAlarmOff = makeButton(screenHome, "Wecker aus", onAlarmOffClicked, 260, 90,
-                             LV_ALIGN_BOTTOM_RIGHT, -40, -120, kColorAlarm);
-
-    // Lautstärke
-    makeButton(screenHome, "Leiser", onVolumeDownClicked, 150, 70,
-               LV_ALIGN_BOTTOM_LEFT, 40, -30);
-    labelVolume = makeLabel(screenHome, &lv_font_montserrat_28, kColorText,
-                            LV_ALIGN_BOTTOM_LEFT, 210, -50, "--%");
-    makeButton(screenHome, "Lauter", onVolumeUpClicked, 150, 70,
-               LV_ALIGN_BOTTOM_LEFT, 310, -30);
-
-    makeButton(screenHome, "Radio", onRadioPageClicked, 150, 70,
-               LV_ALIGN_BOTTOM_RIGHT, -380, -30);
-    makeButton(screenHome, "Ansicht", onShowNewsroomClicked, 150, 70,
-               LV_ALIGN_BOTTOM_RIGHT, -210, -30);
-    makeButton(screenHome, "WLAN", onWifiPageClicked, 150, 70,
-               LV_ALIGN_BOTTOM_RIGHT, -40, -30);
-
-    // Statuszeile: Verbindung und Rückmeldungen zu Aktionen
-    labelStatus = makeLabel(screenHome, &lv_font_montserrat_20, kColorMuted,
-                            LV_ALIGN_TOP_RIGHT, -40, 150);
-    labelMessage = makeLabel(screenHome, &lv_font_montserrat_20, kColorMuted,
-                             LV_ALIGN_TOP_RIGHT, -40, 180);
 }
 
 void buildRadioScreen() {
@@ -316,6 +352,11 @@ void buildNewsroomScreen() {
     if (newsroomAvailable) {
         lv_obj_add_event_cb(screen_view::image(), onNewsroomClicked, LV_EVENT_CLICKED, nullptr);
     }
+    // Nach dem Bild angelegt, liegt also darüber: Solange kein Bild da ist
+    // (Ansicht abgeschaltet, Pi nicht erreichbar), stünde man sonst vor einer
+    // weißen Fläche ohne Erklärung.
+    labelNewsroomHint = makeLabel(screenNewsroom, &lv_font_montserrat_20, 0x333333,
+                                  LV_ALIGN_CENTER, 0, 0, "Hole Ansicht vom Pi ...");
 }
 
 void buildWifiScreen() {
@@ -382,6 +423,7 @@ void updateClock() {
 void applySnapshot() {
     const tablet_state::Snapshot &state = tablet_state::current();
 
+    // --- Kopfzeile --------------------------------------------------------
     if (state.nextAlarm.isEmpty()) {
         setText(labelAlarm, "Kein Weckruf gestellt");
     } else {
@@ -392,25 +434,77 @@ void applySnapshot() {
     lv_obj_set_style_text_color(labelAlarm,
                                 lv_color_hex(state.alarmActive ? kColorAlarm : kColorText), 0);
 
-    if (state.hasWeather) {
-        setText(labelWeather, String(state.temperature, 1) + " C  " + state.weatherText);
+    setText(labelWeather, state.hasWeather
+                ? String(state.temperature, 1) + " C  " + state.weatherText
+                : String());
+
+    // Statuszeile: Verbindung, oder was gerade läuft
+    if (!state.online) {
+        setText(labelStatus, "Pi: " + state.error);
+    } else if (state.mediaState == "playing" && !state.mediaTitle.isEmpty()) {
+        setText(labelStatus, "Laeuft: " + state.mediaTitle);
     } else {
-        setText(labelWeather, "");
+        setText(labelStatus, "");
     }
 
-    if (state.mediaState == "playing" && !state.mediaTitle.isEmpty()) {
-        setText(labelMedia, "Laeuft: " + state.mediaTitle);
-    } else {
-        setText(labelMedia, "");
+    // --- Spalte Termine ---------------------------------------------------
+    lv_obj_clean(listEvents);
+    if (state.events.empty()) {
+        lv_obj_t *label = lv_label_create(listEvents);
+        lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);
+        lv_obj_set_style_text_color(label, lv_color_hex(kColorMuted), 0);
+        lv_label_set_text(label, "Keine Termine");
+    }
+    for (const auto &event : state.events) {
+        // Zeile 1: Tag und Uhrzeit, klein. Zeile 2: der Termin selbst, groß.
+        lv_obj_t *when = lv_label_create(listEvents);
+        lv_obj_set_style_text_font(when, &lv_font_montserrat_20, 0);
+        lv_obj_set_style_text_color(when, lv_color_hex(kColorMuted), 0);
+        lv_label_set_text(when, (event.time.isEmpty() ? event.when
+                                                      : event.when + "  " + event.time).c_str());
+        lv_obj_t *title = lv_label_create(listEvents);
+        lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
+        lv_obj_set_style_text_color(title, lv_color_hex(kColorText), 0);
+        // Lange Titel umbrechen statt abschneiden – die Spalte ist schmal.
+        lv_obj_set_width(title, 340);
+        lv_label_set_long_mode(title, LV_LABEL_LONG_WRAP);
+        lv_label_set_text(title, event.title.c_str());
     }
 
+    // --- Spalte Nachrichten ----------------------------------------------
+    lv_obj_clean(listNews);
+    if (state.news.empty()) {
+        lv_obj_t *label = lv_label_create(listNews);
+        lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);
+        lv_obj_set_style_text_color(label, lv_color_hex(kColorMuted), 0);
+        lv_label_set_text(label, "Keine Nachrichten");
+    }
+    for (const auto &headline : state.news) {
+        if (!headline.source.isEmpty()) {
+            lv_obj_t *source = lv_label_create(listNews);
+            lv_obj_set_style_text_font(source, &lv_font_montserrat_20, 0);
+            lv_obj_set_style_text_color(source, lv_color_hex(kColorMuted), 0);
+            lv_label_set_text(source, headline.source.c_str());
+        }
+        lv_obj_t *title = lv_label_create(listNews);
+        lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
+        lv_obj_set_style_text_color(title, lv_color_hex(kColorText), 0);
+        lv_obj_set_width(title, 340);
+        lv_label_set_long_mode(title, LV_LABEL_LONG_WRAP);
+        lv_label_set_text(title, headline.title.c_str());
+    }
+
+    // --- Anruf ------------------------------------------------------------
     if (state.callText.isEmpty()) {
         lv_obj_add_flag(bannerCall, LV_OBJ_FLAG_HIDDEN);
     } else {
         setText(labelCall, state.callText);
         lv_obj_clear_flag(bannerCall, LV_OBJ_FLAG_HIDDEN);
+        // Nach vorn holen, damit das Banner wirklich über allem liegt.
+        lv_obj_move_foreground(bannerCall);
     }
 
+    // --- Fußzeile ---------------------------------------------------------
     setText(labelVolume, state.volume >= 0 ? String(state.volume) + "%" : "--%");
 
     // Schlummern und Wecker aus sind nur sinnvoll, solange der Wecker läuft.
@@ -424,8 +518,9 @@ void applySnapshot() {
         }
     }
 
-    setText(labelStatus, state.online ? "Verbunden mit newsroom21"
-                                      : "Pi: " + state.error);
+    // Der Knopf zur Pi-Ansicht gibt es nur, wenn der Bildpuffer angelegt
+    // werden konnte.
+    if (!newsroomAvailable) lv_obj_add_flag(btnNewsroom, LV_OBJ_FLAG_HIDDEN);
 }
 
 }  // namespace
@@ -436,8 +531,10 @@ void begin() {
     buildWifiScreen();
     buildRadioScreen();
     buildNewsroomScreen();
-    // Die Newsroom-Ansicht ist die Startseite, solange sie verfügbar ist.
-    lv_scr_load(newsroomAvailable ? screenNewsroom : screenHome);
+    // Startseite ist die eigene Ansicht (Uhr, Wetter, Termine, Nachrichten).
+    // Die vom Pi gezeichnete Ansicht ist über den Knopf "Ansicht" erreichbar,
+    // sobald von dort ein Bild kommt.
+    lv_scr_load(screenHome);
     applySnapshot();
     lvgl_port_unlock();
 }
@@ -447,7 +544,19 @@ void tick() {
 
     // Das Bild nur holen, während die Ansicht tatsächlich zu sehen ist –
     // 48 KB für eine Seite, die niemand ansieht, wären verschwendet.
-    screen_view::loop(newsroomAvailable && lv_scr_act() == screenNewsroom);
+    const bool newsroomVisible = newsroomAvailable && lv_scr_act() == screenNewsroom;
+    screen_view::loop(newsroomVisible);
+    if (newsroomVisible) {
+        const String hint = screen_view::lastError();
+        lvgl_port_lock(-1);
+        if (!hint.isEmpty()) {
+            setText(labelNewsroomHint, hint + " – tippen fuer zurueck");
+            lv_obj_clear_flag(labelNewsroomHint, LV_OBJ_FLAG_HIDDEN);
+        } else if (screen_view::hasImage()) {
+            lv_obj_add_flag(labelNewsroomHint, LV_OBJ_FLAG_HIDDEN);
+        }
+        lvgl_port_unlock();
+    }
 
     if (now - lastClockUpdateMs > 1000) {
         lastClockUpdateMs = now;

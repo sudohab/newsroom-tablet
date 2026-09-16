@@ -62,7 +62,28 @@ void setup() {
 
     // --- Anzeige ------------------------------------------------------------
     board = new Board();
-    if (!board->init() || !board->begin()) {
+    if (!board->init()) {
+        Serial.println("[panel] Board konnte nicht gestartet werden - Neustart");
+        delay(3000);
+        ESP.restart();
+    }
+
+#if LVGL_PORT_AVOID_TEARING_MODE
+    // Gegen Flackern und Reissen: Das Panel bekommt zwei vollstaendige
+    // Bildpuffer, zwischen denen umgeschaltet wird, statt Streifen ins
+    // laufende Bild zu schieben.
+    auto lcd = board->getLCD();
+    lcd->configFrameBufferNumber(LVGL_PORT_DISP_BUFFER_NUM);
+    auto lcdBus = lcd->getBus();
+    if (lcdBus->getBasicAttributes().type == ESP_PANEL_BUS_TYPE_RGB) {
+        // Der Bounce-Puffer liegt im schnellen internen RAM und fuettert das
+        // Panel gleichmaessig nach. Ohne ihn reicht die PSRAM-Bandbreite bei
+        // 800x480 nicht zuverlaessig, und das Bild verrutscht zeilenweise.
+        static_cast<BusRGB *>(lcdBus)->configRGB_BounceBufferSize(lcd->getFrameWidth() * 10);
+    }
+#endif
+
+    if (!board->begin()) {
         // Ohne Anzeige ist das Gerät nutzlos. Neustart statt stiller Fehlfunktion.
         Serial.println("[panel] Board konnte nicht gestartet werden – Neustart");
         delay(3000);

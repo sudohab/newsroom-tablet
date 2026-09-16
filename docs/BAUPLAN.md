@@ -235,3 +235,26 @@ Original.
 **Am Gerät geprüft:** Firmware läuft, fragt den Endpunkt ab – und bekommt
 `404`, weil der Server-Teil noch nicht auf dem Pi ist. Nach dem nächsten
 Bundle sollte das Bild erscheinen.
+
+### 2026-09-16 – Neue Hauptansicht, Flackern behoben
+
+**Flackern:** Die LVGL-Portierung stand auf „ohne Anti-Tearing": LVGL zeichnete
+in zwei schmale Streifenpuffer im internen RAM und schob sie in das laufende
+Bild – sichtbar als Flackern und Reißen. Jetzt Modus 3 (Doppelpuffer im PSRAM
++ LVGL-Direktmodus) mit Bounce-Puffer im internen RAM, wie Espressif es für
+RGB-Panels auf dem ESP32-S3 empfiehlt. Kostet rund 830 KB PSRAM (von 8 MB) und
+gibt sogar internen Speicher frei: 222 KB frei statt 158 KB.
+
+**Orbitale Ansicht abgelehnt.** Hannes gefällt sie nicht; stattdessen eine
+eigene Ansicht mit Uhrzeit, Anrufen, Wetter, Nachrichten und Terminen.
+Abgestimmte Aufteilung: Kopfzeile quer (Uhr, Datum, Weckruf, Wetter), darunter
+zwei gleich große Spalten – links Termine, rechts Nachrichten –, unten die
+Bedienleiste. Ein Anruf legt sich als **großes Banner** über die Mitte.
+
+Die vom Pi gezeichnete Ansicht bleibt erhalten (Knopf „Ansicht"), ist aber
+nicht mehr die Startseite. Sie kostet nichts, solange man sie nicht ansieht:
+Das Bild wird nur geholt, während die Seite sichtbar ist.
+
+Dafür liefert `/api/tablet/state` jetzt auch die nächsten Termine und zu jeder
+Schlagzeile die Quelle – weiterhin nur Anzeigedaten: kein Kalendername, keine
+Beschreibung, keine Links.

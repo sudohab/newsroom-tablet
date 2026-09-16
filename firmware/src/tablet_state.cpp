@@ -28,6 +28,11 @@ JsonDocument makeFilter() {
     filter["weather"]["temp"] = true;
     filter["weather"]["text"] = true;
     filter["call"]["text"] = true;
+    filter["calendar"][0]["title"] = true;
+    filter["calendar"][0]["when"] = true;
+    filter["calendar"][0]["time"] = true;
+    filter["news"][0]["title"] = true;
+    filter["news"][0]["source"] = true;
     filter["media"]["state"] = true;
     filter["media"]["title"] = true;
     filter["system"]["volume"] = true;
@@ -79,6 +84,22 @@ void parse(const String &body) {
 
     next.callText = take(doc["call"]["text"], 80);
 
+    for (JsonObjectConst entry : doc["calendar"].as<JsonArrayConst>()) {
+        Snapshot::Event event;
+        event.title = take(entry["title"], 80);
+        event.when = take(entry["when"], 20);
+        event.time = take(entry["time"], 5);
+        if (!event.title.isEmpty()) next.events.push_back(event);
+        if (next.events.size() >= 5) break;   // mehr passt nicht in die Spalte
+    }
+    for (JsonObjectConst entry : doc["news"].as<JsonArrayConst>()) {
+        Snapshot::Headline headline;
+        headline.title = take(entry["title"], 140);
+        headline.source = take(entry["source"], 40);
+        if (!headline.title.isEmpty()) next.news.push_back(headline);
+        if (next.news.size() >= 6) break;
+    }
+
     JsonObjectConst media = doc["media"];
     next.mediaState = take(media["state"], 20);
     next.mediaTitle = take(media["title"], 80);
@@ -106,7 +127,11 @@ void parse(const String &body) {
         && next.mediaTitle == snapshot.mediaTitle
         && next.volume == snapshot.volume
         && next.configVersion == snapshot.configVersion
-        && next.commandId == snapshot.commandId;
+        && next.commandId == snapshot.commandId
+        && next.events.size() == snapshot.events.size()
+        && next.news.size() == snapshot.news.size()
+        && (next.events.empty() || next.events[0].title == snapshot.events[0].title)
+        && (next.news.empty() || next.news[0].title == snapshot.news[0].title);
     snapshot = next;
     if (!same) changed = true;
 }

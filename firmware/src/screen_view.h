@@ -29,6 +29,9 @@ void loop(bool visible);
 // Speicher da war).
 lv_obj_t *image();
 
+// True, sobald mindestens ein vollständiges Bild vom Pi angekommen ist.
+bool hasImage();
+
 // Letzter Fehler für die Statuszeile ("" = alles in Ordnung).
 String lastError();
 

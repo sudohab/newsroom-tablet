@@ -119,6 +119,8 @@ void loop(bool visible) {
 
 lv_obj_t *image() { return imageObject; }
 
+bool hasImage() { return !currentHash.isEmpty(); }
+
 String lastError() { return error; }
 
 }  // namespace screen_view
