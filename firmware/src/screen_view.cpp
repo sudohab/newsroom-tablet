@@ -89,6 +89,7 @@ void loop(bool visible) {
         return;  // unverändert – nichts zu tun
     }
     if (!result.ok) {
+        if (error != result.error) Serial.printf("[ansicht] %s\n", result.error.c_str());
         error = result.error;
         pollDelayMs = kErrorPollMs;
         return;
@@ -100,10 +101,12 @@ void loop(bool visible) {
         return;
     }
 
+    if (!error.isEmpty()) Serial.println("[ansicht] Bild wieder da");
     error = "";
     pollDelayMs = kPollMs;
     // Der Pi schickt die Prüfsumme im Kopf mit; sie steht in result.etag.
     currentHash = result.etag;
+    Serial.printf("[ansicht] neues Bild (%u Byte)\n", (unsigned)received);
 
     lvgl_port_lock(-1);
     // LVGL hat das Bild eventuell zwischengespeichert – ohne dieses

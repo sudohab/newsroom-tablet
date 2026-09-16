@@ -157,7 +157,9 @@ Result request(const String &url, esp_http_client_method_t method, const String 
             result.ok = false;
             result.error = "Antwort zu gross";
         }
-        if (!result.ok) {
+        // 304 heisst "unveraendert" und ist ein Erfolg, kein Fehler - es
+        // waere irrefuehrend, das als Stoerung ins Log zu schreiben.
+        if (!result.ok && result.status != 304) {
             // Die Antwort des Servers gekuerzt ins Log. Der Text ist fuer
             // Menschen gedacht ("Sitzung abgelaufen", "Sender nicht
             // gefunden") und enthaelt nie Zugangsdaten - ohne ihn raet man
