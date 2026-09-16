@@ -73,7 +73,30 @@ esptool --port /dev/ttyACM0 write_flash 0x0 backup/werksfirmware-<datum>.bin
 4. Zurück auf der Startseite **„Verbindung testen"** antippen. Erwartete
    Antwort: *„Pi erreichbar, Zertifikat geprüft"*.
 
-Ab Etappe 2 kommt der Geräte-Token dazu, den newsroom21 ausstellt.
+### Geräte-Token einspielen
+
+Der Token macht das Tablet gegenüber newsroom21 zum bekannten Gerät. Er wird
+**nie abgetippt und nie weitergeschickt**, sondern verdeckt eingegeben und
+direkt in den Flash geschrieben:
+
+```bash
+# 1. Auf dem Pi erzeugen (nur einmal sichtbar!)
+sudo /opt/newsroom21/scripts/secrets.sh      # → 9) Tablet-Token erzeugen
+
+# 2. Am PC ins Tablet schreiben (Display per USB angeschlossen)
+~/.platformio/penv/bin/python scripts/provision.py
+
+# Nachsehen, was hinterlegt ist (zeigt nie den Token selbst)
+~/.platformio/penv/bin/python scripts/provision.py --status
+```
+
+Weitere Möglichkeiten: `--host 192.168.178.113` setzt die Adresse des Pi,
+`--forget-token` löscht den Token wieder, `--port` wählt eine andere
+Schnittstelle als `/dev/ttyACM0`.
+
+Dieselben Befehle gehen auch von Hand im seriellen Monitor: `HELP` zeigt die
+Liste (`STATUS`, `TOKEN <wert>`, `HOST <adresse>`, `FORGET-TOKEN`,
+`FORGET-WIFI`).
 
 ## 5. Funktionen der Firmware (Etappe 1)
 
@@ -84,6 +107,7 @@ Ab Etappe 2 kommt der Geräte-Token dazu, den newsroom21 ausstellt.
 | `src/wifi_manager.*` | Verbinden, Netzsuche, erneuter Versuch mit wachsendem Abstand. **Kein eigener Hotspot** |
 | `src/api_client.*` | HTTPS zu newsroom21: prüft die Kette gegen die eigene Root-CA, folgt keinen Weiterleitungen, begrenzt die Antwortgröße |
 | `src/ui.*` | Startseite (Uhr, Status, Testknopf) und WLAN-Seite (Liste, Tastatur) |
+| `src/serial_console.*` | Einrichtung per USB: Token und Pi-Adresse setzen. Zeigt nie Token oder WLAN-Passwort an, sondern nur, **ob** etwas hinterlegt ist |
 | `src/lvgl_port/` | Offizielle LVGL-Anbindung von Espressif (unverändert übernommen) |
 
 ## 6. Sicherheitshinweise

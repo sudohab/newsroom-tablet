@@ -22,6 +22,10 @@ constexpr char kKeyBright[] = "brightness";
 // oder beschädigter NVS soll nirgends zu überlangen Werten führen.
 String readLimited(const char *key, size_t maxLen, const String &fallback) {
     if (!ready) return fallback;
+    // Erst nachsehen, ob der Schlüssel überhaupt existiert: getString schreibt
+    // sonst bei jedem Aufruf eine Fehlerzeile ins Log ("NOT_FOUND"), obwohl
+    // ein fehlender Wert der Normalfall ist (frisches Gerät).
+    if (!prefs.isKey(key)) return fallback;
     String value = prefs.getString(key, fallback);
     if (value.length() > maxLen) return fallback;
     return value;

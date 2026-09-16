@@ -25,6 +25,7 @@
 #include "api_client.h"
 #include "lvgl_port/lvgl_v8_port.h"
 #include "root_ca.h"
+#include "serial_console.h"
 #include "settings_store.h"
 #include "tablet_config.h"
 #include "ui.h"
@@ -85,9 +86,12 @@ void setup() {
 
     Serial.printf("[start] freier Speicher: %u Byte intern, %u Byte PSRAM\n",
                   ESP.getFreeHeap(), ESP.getFreePsram());
+    Serial.println("[start] Einrichtung per USB: HELP eingeben");
 }
 
 void loop() {
+    // Einrichtung per USB (Token, Pi-Adresse) – siehe serial_console.h
+    serial_console::loop();
     wifi_manager::loop();
     configureTimeOnce();
     ui::tick();
