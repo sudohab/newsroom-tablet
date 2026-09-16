@@ -78,8 +78,14 @@ Ort mit vollen Rechten, also **weniger** sicher.
 Deshalb: Die Tablet-Schnittstelle ist ein Flask-Blueprint **innerhalb** der
 newsroom21-App (wie `clock_api.py` für die Matrix-Uhren). Sie bekommt keine
 eigene Netzwerkfläche – erreichbar bleibt nur der Reverse Proxy (claude.md §8).
-Dieses Projekt liefert die Dateien in `server/` und ein Skript, das sie in eine
-newsroom21-Arbeitskopie einspielt.
+Entschieden am 16.09.2026: Die Dateien liegen **direkt im Repo newsroom21**,
+nicht als Kopie hier. Zwei Kopien derselben Datei driften auseinander; so
+prüft die dortige Testsuite die Schnittstelle mit, und der vorhandene Updater
+bringt sie auf den Pi. In diesem Projekt bleibt die Firmware.
+
+Gegenstelle in newsroom21 (Commit `3ab0681`):
+`app/tablet_api.py`, `app/tablets.py`, `app/device_tokens.py`,
+`app/ratelimit.py`, `tests/test_tablet_api.py`, `compose.tablet.yaml`.
 
 ---
 
@@ -108,7 +114,7 @@ läuft ab und lässt sich in der Weboberfläche einzeln zurückziehen.
 | # | Inhalt | Stand |
 |---|---|---|
 | 1 | Firmware-Grundgerüst: Panel, Touch, Backlight, WLAN-Einrichtung, TLS-Test gegen den Pi, Uhr auf dem Schirm | **fertig, auf dem Gerät** |
-| 2 | Server: `app/tablets.py` + `app/tablet_api.py` (Token, Status, Konfiguration, Aktions-Allowlist) inkl. Tests | offen |
+| 2 | Server: `app/tablets.py` + `app/tablet_api.py` (Token, Status, Konfiguration, Aktions-Allowlist) inkl. Tests | **fertig im Repo newsroom21** |
 | 3 | Firmware: Startseite (Uhr, Weckzeit, Wetter, Snooze, Lautstärke) an der echten API | offen |
 | 4 | Firmware: Radio-Seite (Favoriten, Start/Stop, Sleeptimer) | offen |
 | 5 | Firmware: Podcast-Seite (Abos, Episoden, Start/Pause) | offen |
@@ -171,3 +177,32 @@ Punkte, die dabei herauskamen:
   Grundcode des Funkmoduls als Klartext ins Log und auf den Bildschirm
   („Passwort falsch (kein Schlüsseltausch)", „Netz nicht gefunden", „Signal zu
   schwach") – sonst sieht man nur „hat nicht geklappt".
+
+### 2026-09-16 – Etappe 2 (im Repo newsroom21)
+
+Schnittstelle `/api/tablet/*` gebaut, 21 neue Tests, gesamte Testsuite grün
+(512 Tests). Entscheidungen:
+
+* **Radio nur aus Favoriten.** Das Tablet kann keine freie Adresse zum
+  Abspielen schicken – sonst könnte ein gestohlener Token den Pi dazu bringen,
+  beliebige Adressen im Netz abzurufen. Wer einen neuen Sender aufnehmen will,
+  tut das in der Weboberfläche.
+* **Der Zustand enthält nur Anzeigedaten.** Kein Telefonbuch, kein
+  Anrufverlauf, keine Weckerliste, keine Zugangsdaten – nur, was auf den
+  Bildschirm kommt.
+* **Jede Aktion nimmt genau ihre Felder an.** Ein `snooze` mit `minutes`
+  wird abgewiesen, ein `radio_play` ohne Sender ebenso. Ein Test hält Schema
+  und Blueprint zusammen, damit beide nicht auseinanderlaufen.
+* **Zwei Module herausgelöst:** `app/device_tokens.py` (Token-Prüfung,
+  zeitkonstant, nur Hashes gespeichert) und `app/ratelimit.py`. Die Sperre lag
+  bisher in `routes.py` – die Tablet-Schnittstelle hätte dafür das komplette
+  Routen-Modul samt Login laden müssen. `app/matrix_clocks.py` blieb bewusst
+  unangetastet, damit die laufenden Uhren durch eine Aufräumaktion nicht
+  ausfallen.
+
+**Damit es auf dem Pi läuft** (macht Hannes, SSH vom PC geht nicht):
+
+1. newsroom21 aktualisieren (Updater oder `git bundle` wie gehabt)
+2. `sudo scripts/secrets.sh` → „9) Tablet-Token erzeugen" → Token notieren
+3. In `/opt/newsroom21/.env` `compose.tablet.yaml` an `COMPOSE_FILE` anhängen
+4. `sudo docker compose up -d`
