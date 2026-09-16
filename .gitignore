@@ -1,0 +1,11 @@
+# Build-Ergebnisse von PlatformIO
+firmware/.pio/
+.pio/
+
+# Sicherung der Werksfirmware: 16 MB Binaerdatei, gehoert nicht in Git.
+# Sie kann ausserdem Reste der Werkskonfiguration enthalten.
+backup/
+
+# Editor
+.vscode/
+*.swp

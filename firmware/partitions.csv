@@ -1,0 +1,15 @@
+# Partitionstabelle für 16 MB Flash – newsroom-tablet
+#
+# Bewusst OHNE OTA-Bereiche: Die Firmware wird per USB eingespielt, genau wie
+# bei den Matrix-Uhren. Ein Update-Dienst über WLAN wäre eine zusätzliche
+# Angriffsfläche auf einem Gerät, das ohnehin am Schreibtisch liegt.
+#
+# nvs       speichert WLAN-Zugang, Geräte-Token und Einstellungen
+# factory   die Anwendung (6 MB reichen für LVGL + TLS mit großem Puffer)
+# storage   Platz für Schriften/Bilder späterer Etappen
+#
+# Name,     Type, SubType,  Offset,   Size
+nvs,        data, nvs,      0x9000,   0x6000,
+phy_init,   data, phy,      0xf000,   0x1000,
+factory,    app,  factory,  0x10000,  0x600000,
+storage,    data, spiffs,   0x610000, 0x9F0000,
