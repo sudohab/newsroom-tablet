@@ -28,6 +28,7 @@
 #include "serial_console.h"
 #include "settings_store.h"
 #include "tablet_config.h"
+#include "tablet_state.h"
 #include "ui.h"
 #include "wifi_manager.h"
 
@@ -79,6 +80,7 @@ void setup() {
         ESP.restart();
     }
 
+    tablet_state::begin();
     ui::begin();
 
     // --- Netzwerk -----------------------------------------------------------
@@ -94,6 +96,7 @@ void loop() {
     serial_console::loop();
     wifi_manager::loop();
     configureTimeOnce();
+    tablet_state::loop();
     ui::tick();
     // LVGL selbst läuft in einer eigenen Aufgabe; diese Schleife muss nur
     // regelmäßig drankommen und darf den Prozessor nicht blockieren.

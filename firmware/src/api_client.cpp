@@ -104,8 +104,15 @@ Result request(const String &url, esp_http_client_method_t method, const String 
     }
 
     const esp_err_t err = esp_http_client_perform(client);
-    if (err == ESP_OK) {
-        result.status = esp_http_client_get_status_code(client);
+    // Auch bei einem Fehlerrückgabewert kann eine gültige HTTP-Antwort
+    // vorliegen: Bei 401 versucht esp_http_client selbst, sich anzumelden,
+    // findet kein unterstütztes Verfahren (wir benutzen einen Bearer-Token)
+    // und meldet ESP_ERR_NOT_SUPPORTED. Der Statuscode steht trotzdem bereit –
+    // ohne diese Zeile stünde am Bildschirm eine nichtssagende Fehlermeldung
+    // statt "Token abgelehnt".
+    const int status = esp_http_client_get_status_code(client);
+    if (err == ESP_OK || status > 0) {
+        result.status = status;
         result.body = collector.body;
         result.ok = result.status >= 200 && result.status < 300;
         if (!result.ok) {
