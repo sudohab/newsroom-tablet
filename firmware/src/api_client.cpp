@@ -116,6 +116,13 @@ Result request(const String &url, esp_http_client_method_t method, const String 
         result.body = collector.body;
         result.ok = result.status >= 200 && result.status < 300;
         if (!result.ok) {
+            // Die Antwort des Servers gekuerzt ins Log. Der Text ist fuer
+            // Menschen gedacht ("Sitzung abgelaufen", "Sender nicht
+            // gefunden") und enthaelt nie Zugangsdaten - ohne ihn raet man
+            // bei einer Stoerung nur herum.
+            String excerpt = collector.body;
+            if (excerpt.length() > 160) excerpt.remove(160);
+            Serial.printf("[api] Status %d: %s\n", result.status, excerpt.c_str());
             // Klartext für die Anzeige. Der Server liefert absichtlich keine
             // Einzelheiten, also übersetzen wir die üblichen Fälle selbst.
             if (result.status == 401) result.error = "Token abgelehnt";
