@@ -87,7 +87,7 @@ newsroom21-Arbeitskopie einspielt.
 
 | Schutzziel | Umsetzung |
 |---|---|
-| Kein Secret im Code/Git | WLAN-Zugang und Geräte-Token stehen **nur im NVS** des ESP, gesetzt über den Einrichtungs-Hotspot bzw. per USB-Provisionierung. Auf dem Server nur als Secret-Datei (`tablet_token`), verwaltet mit `scripts/secrets.sh`. |
+| Kein Secret im Code/Git | WLAN-Zugang und Geräte-Token stehen **nur im NVS** des ESP: das WLAN wird am Touchscreen eingegeben, der Token per USB eingespielt. Das Gerät macht dafür ausdrücklich **keinen offenen Einrichtungs-Hotspot** auf (anders als die Matrix-Uhren, die kein Display haben). Auf dem Server liegt nur der Hash als Secret-Datei (`tablet_token`), verwaltet mit `scripts/secrets.sh`. |
 | Token-Speicherung | Server speichert **nur den SHA-256-Hash** eines 32-Byte-Zufallstokens plus Ablaufdatum – wie bei den Matrix-Uhren. Vergleich zeitkonstant über alle Einträge. |
 | Kleinstmögliche Rechte (AuthZ) | Der Tablet-Token öffnet **ausschließlich** `/api/tablet/*`. Kein Dashboard, kein Login, keine System-Endpunkte. Aktionen sind eine **feste Allowlist** (Snooze, Wecker aus, Lautstärke, Radio/Podcast starten und stoppen, Sleeptimer). Ausdrücklich **nicht** erlaubt: Passwörter, Home-Assistant-/Fritz!Box-Zugangsdaten, Systemupdate, Neustart, Feeds löschen. |
 | Input-Validierung | Jede Eingabe vom Tablet wird per Pydantic-`StrictModel` geprüft (`extra="forbid"`), bevor sie ein Modul erreicht. |
