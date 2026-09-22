@@ -25,6 +25,11 @@
  *   ~/.platformio/penv/bin/pio run -d firmware -t upload
  */
 
+// Nur im Testbau uebersetzen (pio run -e paneltest). Der Schalter kommt aus
+// platformio.ini; im normalen Bau ist diese Datei leer. Ein Dateifilter reicht
+// hier nicht, weil er im ESP-IDF-Bau nicht mehr greift.
+#ifdef PANEL_PCLK_MHZ
+
 #include <Arduino.h>
 #include <esp_display_panel.hpp>
 #include <esp_lcd_panel_rgb.h>
@@ -224,3 +229,5 @@ void loop() {
 
     delay(5);
 }
+
+#endif  // PANEL_PCLK_MHZ

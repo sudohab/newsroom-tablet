@@ -479,3 +479,48 @@ WLAN-Puffer. Knapp, aber stabil.
 Die Firmware meldet Temperatur, Takt und freien Speicher jetzt alle 30 Sekunden
 (`[zustand]`) und auf `STATUS`. Solche Fragen sind damit in einer Minute
 beantwortet statt in einer Bastelrunde.
+
+### 2026-09-22 – Der Bau auf echtem ESP-IDF (der Durchbruch kam aus dem Backup)
+
+Hannes' Idee, in der gesicherten Werksfirmware nachzusehen, hat die Sache
+entschieden. Aus dem Abbild ausgelesen (`esp_app_desc`):
+
+```
+Projekt:  waveshare-7inch
+Version:  2025.12.1          ← ESPHome-Versionsschema
+ESP-IDF:  5.5.1
+```
+
+Und in den Zeichenketten: `esphome`, `lvgl`, `esp_lcd_new_rgb_panel`. Die
+Werksfirmware ist also **ESPHome mit LVGL auf ESP-IDF 5.5.1** – fast unser
+Aufbau, nur auf einem echten ESP-IDF statt der vorgefertigten
+Arduino-Bibliotheken. Damit war bewiesen: Das Panel *kann* ruhig laufen, und
+der Unterschied liegt in den Systemeinstellungen.
+
+**Umstellung auf `framework = arduino, espidf`** mit `sdkconfig.defaults`.
+Entscheidend (nachgeprüft in der erzeugten `sdkconfig`):
+
+| Einstellung | Wirkung |
+|---|---|
+| `CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` | Programmcode liegt im PSRAM |
+| `CONFIG_SPIRAM_RODATA=y` | Konstanten liegen im PSRAM |
+| *(beides zusammen)* | **Der Flash wird im Betrieb nicht mehr gebraucht** – und damit blockiert er den Speicherbus nicht mehr, an dem das Panel hängt |
+| `CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP` aus | WLAN-Puffer nicht im PSRAM |
+| `CONFIG_ESP32S3_DATA_CACHE_64KB`, `..._LINE_64B` | größerer Zwischenspeicher, von Espressif für den Bounce-Betrieb empfohlen |
+| `CONFIG_LCD_RGB_ISR_IRAM_SAFE=y` | Bildausgabe läuft auch, wenn der Flash beschäftigt ist |
+| `CONFIG_AUTOSTART_ARDUINO=y` | sonst fehlt `app_main` – ohne diesen Schalter kein Einsprungpunkt |
+
+**Stolpersteine auf dem Weg** (alle im Projekt behoben):
+* Arduino als IDF-Komponente schleppt Cloud-Dienste mit (ESP Insights,
+  RainMaker). PlatformIO erzeugt deren eingebettete Zertifikate nicht
+  rechtzeitig; der Bau bricht mit „`https_server.crt.S` not found" ab.
+  Abhilfe: einmal `ninja` im Bauordner die Zwischendateien erzeugen lassen.
+* `build_src_filter` greift im IDF-Bau nicht mehr – die Testfirmware ist
+  jetzt über `#ifdef PANEL_PCLK_MHZ` abgeschirmt.
+* `sdkconfig.defaults` wirkt nur beim ersten Bau; danach muss die erzeugte
+  `sdkconfig.<env>` gelöscht werden.
+
+**Zwei frühere Notlösungen wieder zurückgebaut**, weil ihr Grund entfallen ist
+und sie internen RAM fraßen (nur noch 14 KB frei, die Abfragen scheiterten):
+`WiFi.useStaticBuffers(true)` und der 30-Zeilen-Bounce-Puffer (jetzt 10).
+Danach: **55 KB frei, Abfragen fehlerfrei, 51 °C, keine Neustarts.**

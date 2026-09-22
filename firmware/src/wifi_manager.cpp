@@ -80,21 +80,12 @@ void startConnect() {
 }  // namespace
 
 void begin() {
-    // WLAN-Puffer in den internen RAM legen, nicht in den PSRAM.
-    //
-    // Der Arduino-Kern hat CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y: WLAN- und
-    // Netzwerkpuffer landen dann im PSRAM - also genau in dem Speicher, aus
-    // dem das Panel dauernd sein Bild liest. Jedes Funkpaket nimmt dem Panel
-    // Bandbreite weg, und das Bild verrutscht.
-    //
-    // Am Geraet nachgewiesen: Im Stufentest (src/paneltest.cpp) wandert das
-    // Bild, sobald das WLAN eingeschaltet wird - noch bevor eine einzige
-    // Abfrage laeuft.
-    //
-    // useStaticBuffers(true) legt feste Puffer im internen RAM an. Das kostet
-    // dort Platz, haelt aber den PSRAM fuer das Panel frei.
-    WiFi.useStaticBuffers(true);
-
+    // Hinweis: Hier stand WiFi.useStaticBuffers(true), um die WLAN-Puffer aus
+    // dem PSRAM herauszuhalten. Das ist nicht mehr noetig und schadet sogar:
+    // Seit dem Bau auf echtem ESP-IDF steht in sdkconfig.defaults
+    // "CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP is not set" - die Puffer liegen
+    // also ohnehin im internen RAM. Feste Puffer haetten ihn nur zusaetzlich
+    // im Voraus belegt, und davon ist er inzwischen knapp.
     WiFi.mode(WIFI_STA);
     WiFi.onEvent(onWifiEvent);
     // Länderkennung Deutschland: Hier sind die Funkkanäle 1 bis 13 erlaubt.

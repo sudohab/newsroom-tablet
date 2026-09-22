@@ -1,0 +1,69 @@
+# Systemeinstellungen des ESP-IDF für newsroom-tablet
+#
+# Warum diese Datei überhaupt existiert:
+#
+# Mit den vorgefertigten Arduino-Bibliotheken sind diese Einstellungen fest
+# vorgegeben und nicht änderbar. Genau die fehlenden Werte sind aber die
+# Ursache dafür, dass das Bild unruhig war: Das RGB-Panel liest sein Bild
+# ununterbrochen aus dem PSRAM, und jeder Zugriff des Prozessors auf den Flash
+# blockiert dabei kurz denselben Speicherbus.
+#
+# Der Beweis, dass es anders geht, lag auf dem Gerät selbst: Die gesicherte
+# Werksfirmware (backup/) ist ESPHome 2025.12.1, gebaut mit ESP-IDF 5.5.1 und
+# ebenfalls LVGL – und sie lief ruhig. Sie setzt genau die Werte unten.
+#
+# Quellen: Espressifs Fehlerliste zum RGB-Display ("Why do I get drift …")
+# und die ESPHome-Konfigurationen der Gemeinde für genau dieses Board.
+
+# --- Der Kern: Programmcode und Konstanten in den PSRAM --------------------
+# Damit wird der Flash im laufenden Betrieb nicht mehr gebraucht. Ohne das
+# blockiert jeder Nachladevorgang aus dem Flash den Speicherbus – und das
+# Panel bekommt seine Bilddaten zu spät, das Bild wandert.
+CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y
+CONFIG_SPIRAM_RODATA=y
+
+# --- PSRAM: Octal-Modus, volle Geschwindigkeit ----------------------------
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
+CONFIG_SPIRAM_USE_MALLOC=y
+# WLAN- und Netzwerkpuffer NICHT im PSRAM anlegen: Sie würden dem Panel
+# Bandbreite wegnehmen. Am Gerät nachgewiesen – das Bild wandert, sobald das
+# Funkmodul eingeschaltet wird.
+# CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP is not set
+
+# --- Zwischenspeicher: größer und mit passender Zeilenbreite ---------------
+# 64 KB Datencache statt 32 KB, und 64 Byte je Zeile – das empfiehlt Espressif
+# ausdrücklich für den Betrieb mit Bounce-Puffer.
+CONFIG_ESP32S3_DATA_CACHE_64KB=y
+CONFIG_ESP32S3_DATA_CACHE_LINE_64B=y
+CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB=y
+
+# --- Bildausgabe ----------------------------------------------------------
+# Die Unterbrechungsroutine des Panels muss auch dann laufen können, wenn der
+# Flash gerade beschäftigt ist.
+CONFIG_LCD_RGB_ISR_IRAM_SAFE=y
+# Nach einem Aussetzer die Übertragung im Bildwechsel neu ausrichten. Nicht
+# als alleinige Lösung gedacht (sagt Espressif selbst), aber als Auffangnetz
+# sinnvoll – vorausgesetzt, es läuft nicht zusätzlich noch eine eigene.
+CONFIG_LCD_RGB_RESTART_IN_VSYNC=y
+
+# --- Prozessor ------------------------------------------------------------
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+CONFIG_FREERTOS_HZ=1000
+# Auf Geschwindigkeit übersetzen statt auf Größe: Weniger Rechenzeit je Bild
+# heißt auch weniger Gedränge auf dem Speicherbus.
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+
+# --- Flash ----------------------------------------------------------------
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# --- Arduino als Komponente -----------------------------------------------
+# Ohne diesen Schalter gibt es kein app_main: Der Arduino-Kern liefert seinen
+# Einsprungpunkt (der setup() und loop() aufruft) nur, wenn der automatische
+# Start eingeschaltet ist.
+CONFIG_AUTOSTART_ARDUINO=y
