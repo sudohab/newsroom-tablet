@@ -102,15 +102,19 @@ void setup() {
         // eigenem Beispiel fuer dieses Board.
         static_cast<BusRGB *>(lcdBus)->configRGB_FreqHz(21 * 1000 * 1000);
 
-        // 10 Zeilen (800 x 10 Pixel x 48 = 800 x 480): zwei Puffer zu je
-        // 16 KB, zusammen 32 KB internen RAM.
+        // 20 Zeilen (800 x 20 Pixel x 24 = 800 x 480): zwei Puffer zu je
+        // 32 KB, zusammen 64 KB internen RAM.
         //
-        // Vorher waren es 30 Zeilen (96 KB). So viel Vorrat war noetig, solange
-        // der Prozessor seinen Programmcode aus dem Flash nachladen musste und
-        // dabei den Speicherbus blockierte. Seit der Code im PSRAM liegt
-        // (CONFIG_SPIRAM_FETCH_INSTRUCTIONS), faellt dieser Grund weg - und der
-        // interne RAM wird anderswo dringender gebraucht.
-        static_cast<BusRGB *>(lcdBus)->configRGB_BounceBufferSize(lcd->getFrameWidth() * 10);
+        // Der Puffer fuellt den Zeilenanfang vor. Ist er zu klein, laeuft er
+        // beim Zeilenwechsel leer - und genau das sieht man als flimmernde
+        // Streifen am LINKEN Bildrand. Mit 10 Zeilen trat das auf, sobald die
+        // Oberflaeche mehr zu zeichnen hatte.
+        //
+        // Der Platz dafuer kommt aus den LVGL-Zeichenpuffern (siehe
+        // lvgl_v8_port.h, dort von 20 auf 10 Zeilen): Der interne RAM ist mit
+        // rund 320 KB knapp, und fuer ein ruhiges Bild ist er beim Panel
+        // besser angelegt als beim Zeichnen.
+        static_cast<BusRGB *>(lcdBus)->configRGB_BounceBufferSize(lcd->getFrameWidth() * 20);
     }
 
     if (!board->begin()) {

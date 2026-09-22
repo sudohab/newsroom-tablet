@@ -38,12 +38,17 @@
  */
 #define LVGL_PORT_BUFFER_MALLOC_CAPS            (MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)       // Allocate LVGL buffer in SRAM
 // #define LVGL_PORT_BUFFER_MALLOC_CAPS            (MALLOC_CAP_SPIRAM)      // Allocate LVGL buffer in PSRAM
-// 20 Zeilen: 800 x 20 x 2 Byte = 32 KB je Puffer, zwei davon im internen RAM.
+// 10 Zeilen: 800 x 10 x 2 Byte = 16 KB je Puffer, zwei davon im internen RAM.
 //
-// 60 Zeilen waren zu viel: Zusammen mit dem Bounce-Puffer reichte der interne
-// RAM nicht mehr, die Anlage schlug fehl und das Geraet startete in einer
-// Endlosschleife neu - was am Bildschirm wie heftiges Flackern aussieht.
-#define LVGL_PORT_BUFFER_SIZE_HEIGHT            (20)
+// Der interne RAM ist mit rund 320 KB knapp und wird gebraucht fuer: diese
+// Zeichenpuffer, den Bounce-Puffer des Panels, WLAN und TLS. Die Aufteilung
+// ist am Geraet erprobt:
+//   • 60 Zeilen -> Speicher reichte nicht, Neustartschleife
+//   • 20 Zeilen + kleiner Bounce-Puffer -> Streifen am linken Bildrand
+//   • 10 Zeilen + 20 Zeilen Bounce-Puffer -> ruhig
+// Kleinere Zeichenpuffer heissen nur, dass LVGL in mehr Streifen zeichnet -
+// das kostet etwas Zeit, aber nichts an Ruhe.
+#define LVGL_PORT_BUFFER_SIZE_HEIGHT            (10)
 #define LVGL_PORT_BUFFER_NUM                    (2)
 
 /**

@@ -603,3 +603,30 @@ eine erweiterte Schrift oder gezeichnete Grafiken.
 Espressif-Zusatzkomponenten erzeugt jetzt `scripts/generate_embeds.py` vor dem
 Übersetzen – und zwar beim **Laden** des Skripts, nicht als Vor-Schritt:
 PlatformIO prüft die Quelldateien schon beim Aufbau des Abhängigkeitsbaums.
+
+### 2026-09-23 – Streifen am linken Bildrand
+
+Hannes: „Am linken Rand zieht es Streifen, diese flimmern." Drei Fragen dazu
+gleich mitbeantwortet:
+
+* **Einstellungen durcheinander?** Nein – nachgesehen in der erzeugten
+  `sdkconfig`: Code und Konstanten im PSRAM, großer Cache, WLAN-Puffer
+  draußen. Alles steht.
+* **Netzteil?** Nicht nötig, das war schon ausgeschlossen.
+* **Ursache:** meine eigene Speicherumverteilung beim ESP-IDF-Umbau. Der
+  Bounce-Puffer war von 30 auf 10 Zeilen geschrumpft. Er füllt den
+  Zeilenanfang vor; läuft er leer, fehlen die ersten Pixel jeder Zeile –
+  **genau das sieht man als Streifen am linken Rand**. Mit der reicheren
+  Oberfläche trat es zutage.
+
+Aufteilung des knappen internen RAM (rund 320 KB), am Gerät erprobt:
+
+| LVGL-Zeichenpuffer | Bounce-Puffer | Ergebnis |
+|---|---|---|
+| 60 Zeilen | 30 Zeilen | Speicher reichte nicht → Neustartschleife |
+| 20 Zeilen | 10 Zeilen | Streifen am linken Bildrand |
+| **10 Zeilen** | **20 Zeilen** | ruhig, 45 KB frei |
+
+Kleinere Zeichenpuffer heißen nur, dass LVGL in mehr Streifen zeichnet – das
+kostet etwas Zeit, aber nichts an Ruhe. Der Puffer des Panels ist der
+wichtigere von beiden.
