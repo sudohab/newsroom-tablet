@@ -427,3 +427,39 @@ Schrift blau – das ersetzt den Rahmen.
 2. Der **Farbverlauf im Hintergrund** ist weg. Er musste bei jedem
    freigelegten Stück neu berechnet werden; eine einzige deckende Farbe wird
    einfach geschrieben.
+
+### 2026-09-22 – Die Drift kommt vom Funkbetrieb
+
+Der Stufentest (`src/paneltest.cpp`) schaltet die Verdächtigen nacheinander zu
+und zeigt die Stufe als Farbbalken an. Hannes' Beobachtung:
+
+* **Rot** (nur Bild): ruhig
+* **Gelb/Grün** (WLAN an, *keine* Abfragen): Bild wandert nach unten
+* **Blau** (zusätzlich Abfragen): wandert und flackert
+
+Damit ist der Funkbetrieb selbst die Ursache, nicht die Oberfläche, nicht die
+Abfragen und nicht das Panel. Passt zu Espressifs Fehlerliste zum RGB-Display:
+Bilddrift entsteht, wenn dem Panel die PSRAM-Bandbreite fehlt.
+
+Zwei Funde in der `sdkconfig` der vorgefertigten Arduino-Bibliotheken:
+
+1. **`CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y`** – WLAN- und Netzwerkpuffer
+   liegen im **PSRAM**, also genau in dem Speicher, aus dem das Panel dauernd
+   sein Bild liest. Gegenmittel ohne Umbau: `WiFi.useStaticBuffers(true)` legt
+   feste Puffer im internen RAM an.
+2. **`CONFIG_LCD_RGB_RESTART_IN_VSYNC=y`** – die Neusynchronisierung, die ich
+   von Hand eingebaut hatte, ist **bereits eingeschaltet**. Meine lief also
+   doppelt; mit ihr wanderte das Bild sichtbar stärker. Wieder entfernt.
+
+**Objektives Maß gefunden:** Der Stufentest zählt die fertig gezeichneten
+Bilder. 39 je Sekunde entsprechen dem eingestellten Pixeltakt und heißen
+„gesund"; steigt die Zahl (gemessen 74 bis 138), werden Bilder abgebrochen und
+neu begonnen – genau das sieht man als Springen. Damit lässt sich die Unruhe
+messen statt schätzen.
+
+**Falls das nicht reicht**, bleibt Espressifs eigentliche Empfehlung:
+`CONFIG_SPIRAM_FETCH_INSTRUCTIONS` und `CONFIG_SPIRAM_RODATA` einschalten,
+damit der Flash im Betrieb nicht mehr gebraucht wird. Das geht nur mit einem
+vollständigen ESP-IDF-Bau (`framework = arduino, espidf`) statt der
+vorgefertigten Arduino-Bibliotheken – ein größerer Umbau mit langer erster
+Übersetzung.

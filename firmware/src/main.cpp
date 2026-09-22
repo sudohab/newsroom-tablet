@@ -19,7 +19,6 @@
 
 #include <Arduino.h>
 #include <esp_display_panel.hpp>
-#include <esp_lcd_panel_rgb.h>
 #include <lvgl.h>
 #include <time.h>
 
@@ -40,23 +39,19 @@ namespace {
 
 Board *board = nullptr;
 
-// Wird nach jedem fertig gezeichneten Bild aufgerufen (im Interrupt).
+// Hinweis zur Bilddrift (Bild wandert nach oben oder unten):
 //
-// Gegen die Bilddrift: Beim RGB-Panel schiebt der Baustein die Zeilen ohne
-// Rueckmeldung heraus. Verliert die Uebertragung einmal den Takt - etwa weil
-// der Speicher kurz nicht schnell genug liefert -, bleibt der Versatz fuer
-// immer bestehen: Das Bild "huepft" nach oben und bleibt schief.
+// Hier stand eine eigene Neusynchronisierung, die nach jedem Bild
+// esp_lcd_rgb_panel_restart() aufrief. Sie ist wieder entfernt - aus zwei
+// Gruenden, beide am Geraet nachgewiesen:
 //
-// esp_lcd_rgb_panel_restart() setzt die Uebertragung wieder auf den
-// Bildanfang. Die Funktion merkt sich das nur; der eigentliche Neuanfang
-// passiert beim naechsten Bildwechsel und ist deshalb nicht sichtbar.
-// In ESP-IDF gibt es dafuer die Einstellung LCD_RGB_RESTART_IN_VSYNC - die
-// laesst sich mit dem vorgefertigten Arduino-Kern nicht setzen, also machen
-// wir hier genau dasselbe von Hand.
-bool onRefreshFinish(void *user_data) {
-    esp_lcd_rgb_panel_restart(static_cast<esp_lcd_panel_handle_t>(user_data));
-    return false;
-}
+//  1. Der Arduino-Kern hat CONFIG_LCD_RGB_RESTART_IN_VSYNC bereits
+//     eingeschaltet (nachgesehen in der sdkconfig der vorgefertigten
+//     Bibliotheken). Unsere lief also zusaetzlich, doppelt.
+//  2. Mit ihr wanderte das Bild sichtbar staerker als ohne. Espressif fuehrt
+//     dieses Neusynchronisieren in seiner Fehlerliste selbst als "nicht als
+//     erste Loesung empfohlen".
+
 bool timeConfigured = false;
 
 // Holt die Uhrzeit, sobald das WLAN steht. Zuerst wird der Router gefragt –
@@ -120,9 +115,6 @@ void setup() {
         delay(3000);
         ESP.restart();
     }
-
-    // Bilddrift vorbeugen (siehe onRefreshFinish)
-    lcd->attachRefreshFinishCallback(onRefreshFinish, lcd->getRefreshPanelHandle());
 
     auto backlight = board->getBacklight();
     if (backlight != nullptr) {
