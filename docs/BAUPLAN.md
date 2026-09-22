@@ -118,10 +118,46 @@ läuft ab und lässt sich in der Weboberfläche einzeln zurückziehen.
 | 3 | Firmware: Startseite (Uhr, Weckzeit, Wetter, Snooze, Lautstärke) an der echten API | **fertig, auf dem Gerät** |
 | 3b | Newsroom-Ansicht (orbital) als Bild vom Pi | Firmware fertig, Server-Teil noch nicht auf dem Pi |
 | 4 | Firmware: Radio-Seite (Favoriten, Start/Stop, Sleeptimer) | **fertig, auf dem Gerät** |
-| 5 | Firmware: Podcast-Seite (Abos, Episoden, Start/Pause) | offen |
-| 6 | Firmware: eigene Einstellungsseite auf dem Gerät | offen |
+| 5 | Firmware: Podcast-Seite (Abos, Episoden, Start/Pause) | zurückgestellt |
+| 6 | Firmware: eigene Einstellungsseite auf dem Gerät | zurückgestellt |
 | 7 | newsroom21-Weboberfläche: Tab „Tisch-Display“ mit Probier-Knopf | offen |
 | 8 | Handbuch, Deploy-Checkliste, Sicherheits-Durchsicht | offen |
+
+### Etappen des Oberflächen-Umbaus (ab 22.09.2026)
+
+Nachdem das Bild ruhig steht, wird die Oberfläche neu aufgeteilt. Abgestimmt
+mit Hannes:
+
+| # | Inhalt | Stand |
+|---|---|---|
+| 9 | **Pi-Seite:** Wetterdetails, Termine mit Ort + Monatsübersicht, Nachrichten je Quelle, NINA-Warnungen, verpasste Anrufe, Wecker stellen | offen |
+| 10 | **Rahmen:** gemeinsame Kopfzeile (Uhr, Datum, Wecker, Wetter) auf allen Seiten + **waagerecht scrollbare Menüleiste** unten | offen |
+| 11 | **Startseite:** nächster Termin, wechselnde Schlagzeile (alle 2 min, reihum je Quelle), rechts drei Felder: verpasste Anrufe · laufender Sender · NINA | offen |
+| 12 | **Seiten:** Wetter · Termine (Monat + Liste) · Nachrichten · NINA · Anrufe · Radio (mit Lautstärke) · Wecker · WLAN | offen |
+| 13 | Anrufbeantworter-Nachrichten (braucht neuen Fritz!Box-Zugriff, TR-064) | später |
+
+**Gestaltung:** flach, an den LVGL-Beispielen orientiert (Schalter, Knöpfe,
+waagerechtes Scrollen mit Einrasten).
+
+**Aufbau der Startseite** (800×480):
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  22:44   Montag, 22.9.          ☁ 14°    ← Kopf, überall │
+│          Weckruf 06:30                                   │
+├───────────────────────────────────┬──────────────────────┤
+│ NÄCHSTER TERMIN                   │ 3 verpasste Anrufe   │
+│ Do 18.9. 09:30  Zahnarzt          ├──────────────────────┤
+├───────────────────────────────────┤ BR24                 │
+│ NACHRICHTEN (Wechsel alle 2 min)  ├──────────────────────┤
+│ ZEIT · Meldung eins …             │ alles ruhig          │
+├───────────────────────────────────┴──────────────────────┤
+│  ‹ Start · Wetter · Termine · News · NINA · Anrufe · …  › │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Reihenfolge der Schlagzeilen:** reihum über die Quellen – Quelle 1 Meldung 1,
+Quelle 2 Meldung 1, Quelle 3 Meldung 1, dann Quelle 1 Meldung 2 und so fort.
 
 Vor Etappe 1 wird die **Werksfirmware gesichert** (`scripts/backup_flash.sh`),
 damit das Gerät jederzeit in den Auslieferungszustand zurück kann.
