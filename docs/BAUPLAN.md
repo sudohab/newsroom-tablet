@@ -154,6 +154,52 @@ Offene Fragen, die vor dem Bauen zu klären sind:
 * **Was passiert beim Ablauf?** Ton über den Pi, Anzeige auf dem Tablet, oder
   beides? Bis der Ton am Gerät da ist (MCP4725), bliebe nur der Pi.
 
+### Etappe 15 – Geräte-Einstellungen (vorgemerkt, 23.09.2026)
+
+Eine Seite für das Gerät selbst:
+
+* **Helligkeit einstellen**
+* **Nachtmodus**: dimmen und ganz aus
+* **Berührung weckt den Bildschirm** wieder auf
+
+⚠ **Wichtige Einschränkung, am Gerät geprüft:** Die Hintergrundbeleuchtung
+dieses Boards hängt am IO-Expander CH422G und ist ein **reiner Schalter** –
+an oder aus, nichts dazwischen. In der Bibliothek nimmt `setBrightness()`
+zwar einen Prozentwert entgegen, macht daraus aber nur „größer als null =
+an" (nachgesehen in `esp_panel_backlight_switch_expander.cpp`). Eine echte
+Helligkeitsregelung gibt es also nicht.
+
+Was stattdessen geht:
+* **Dimmen durch Abdunkeln des Bildes**: eine dunkle Fläche über der
+  Oberfläche, stufenlos einstellbar. Das Panel leuchtet gleich hell weiter,
+  wirkt aber dunkler – nachts völlig ausreichend und ohne Zusatzteile.
+* **Ganz aus**: Beleuchtung abschalten (das kann der Schalter), Berührung
+  schaltet sie wieder ein. Der Touchcontroller arbeitet weiter, auch wenn die
+  Beleuchtung aus ist.
+* Eine echte Regelung bräuchte einen Eingriff in die Hardware (Beleuchtung
+  über einen PWM-fähigen Anschluss statt über den Expander).
+
+### Etappe 16 – Nachrichten an die Matrix-Uhren (vorgemerkt, 23.09.2026)
+
+Vom Tablet aus eine Nachricht auf die Laufschrift-Uhren schicken:
+
+* **Vorgefertigte Nachrichten** zum Antippen („Bitte zum Essen kommen" …)
+* **Freier Text** über die Bildschirmtastatur
+* Empfänger wählbar: **eine bestimmte Uhr oder alle**
+
+Gute Nachricht: Der Weg dorthin existiert schon. newsroom21 kann einer Uhr
+einen Text schicken (`POST /api/matrix-clocks/<uhr>/test-text`, siehe
+`app/matrix_clocks.py::queue_command`), und die Uhren holen ihn beim nächsten
+Abruf ab. Zu bauen ist also:
+* eine Tablet-Aktion `clock_message` mit **fester Textlänge und Zeichenprüfung**
+  (die Uhren zeigen nur einen begrenzten Zeichensatz),
+* die Liste der Uhren für die Empfängerauswahl (`GET /api/tablet/clocks`),
+* die Seite mit Schnellauswahl und Tastatur.
+
+Zu klären: Sollen die vorgefertigten Texte **in der Weboberfläche gepflegt**
+werden (dann auch auf dem Tablet änderbar ohne neue Firmware) oder fest in
+der Firmware stehen? Empfehlung: in newsroom21 pflegen.
+
 **Gestaltung:** flach, an den LVGL-Beispielen orientiert (Schalter, Knöpfe,
 waagerechtes Scrollen mit Einrasten).
 
