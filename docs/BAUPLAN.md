@@ -374,3 +374,33 @@ und ist deshalb nicht sichtbar. ESP-IDF hat dafür die Einstellung
 `LCD_RGB_RESTART_IN_VSYNC`; mit dem vorgefertigten Arduino-Kern lässt sie sich
 nicht setzen, deshalb hängt die Firmware sich selbst in den Rückruf „Bild
 fertig" und macht genau dasselbe.
+
+### 2026-09-22 – Trennversuch: die Gestaltung war zu teuer
+
+Nach mehreren Runden Raten ein sauberer Versuch: `src/paneltest.cpp` zeigt ein
+festes Testbild (Farbbalken plus roter Streifen oben als Lineal) – **ohne**
+WLAN, TLS, LVGL und ohne Neuzeichnen. Ergebnis von Hannes: **„Das Testbild ist
+ruhig."**
+
+Damit ist das Panel entlastet: Pixeltakt, Austastlücken und Bandbreite reichen.
+Die Unruhe kam aus unserer Oberfläche.
+
+**Nicht die Programmiersprache** (Hannes' Vermutung): Es läuft bereits C++
+direkt auf dem Chip. Teuer war die Gestaltung. Der ESP32-S3 zeichnet alles mit
+dem Hauptprozessor, ohne Grafikbeschleuniger:
+
+* **Durchsichtige Flächen** zwingen ihn, für jedes Pixel den Untergrund zu
+  lesen und zu verrechnen.
+* **Weiche Schatten** sind eine Weichzeichnung rund um jede Karte – der
+  teuerste Einzelposten.
+* Und weil die Karten durchsichtig waren, musste beim Weiterspringen der Uhr
+  **alles darunter** mitgezeichnet werden, jede Sekunde neu.
+
+Jetzt „Glas-Optik zum kleinen Preis": deckende Karten in einem Ton heller als
+der Grund, ein Pixel heller Rand, große Rundungen – **keine** Schatten, keine
+Verläufe in den Karten. Der Hintergrundverlauf bleibt: Er wird einmal gezeichnet
+und danach von den Karten verdeckt.
+
+Die Testfirmware bleibt im Projekt (`pio run -d firmware -e paneltest -t upload`).
+Sie hat in einem Durchgang geklärt, was vier Runden Vermutung nicht geschafft
+haben – und beantwortet dieselbe Frage beim nächsten Mal sofort wieder.

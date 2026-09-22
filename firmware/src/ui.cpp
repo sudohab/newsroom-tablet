@@ -231,7 +231,7 @@ void buildHomeScreen() {
     // --- Anrufbanner: liegt über allem, sonst unsichtbar -------------------
     bannerCall = makeCard(screenHome, 60, 180, 680, 120);
     lv_obj_set_style_bg_color(bannerCall, lv_color_hex(kCall), 0);
-    lv_obj_set_style_bg_opa(bannerCall, LV_OPA_90, 0);
+    lv_obj_set_style_bg_opa(bannerCall, LV_OPA_COVER, 0);
     lv_obj_add_flag(bannerCall, LV_OBJ_FLAG_HIDDEN);
     labelCall = lv_label_create(bannerCall);
     lv_obj_set_style_text_font(labelCall, &ui_font_30, 0);
@@ -464,9 +464,9 @@ void tick() {
                                                 station.name.c_str());
                 lv_obj_set_style_text_font(btn, &ui_font_22, 0);
                 lv_obj_set_style_text_color(btn, lv_color_hex(kText), 0);
-                lv_obj_set_style_bg_color(btn, lv_color_hex(kGlass), 0);
-                lv_obj_set_style_bg_opa(btn, 20, 0);
-                lv_obj_set_style_bg_opa(btn, 70, LV_STATE_PRESSED);
+                lv_obj_set_style_bg_color(btn, lv_color_hex(kButton), 0);
+                lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
+                lv_obj_set_style_bg_color(btn, lv_color_hex(kButtonPressed), LV_STATE_PRESSED);
                 lv_obj_set_style_radius(btn, 12, 0);
                 lv_obj_set_style_pad_all(btn, 12, 0);
                 lv_obj_add_event_cb(btn, onStationClicked, LV_EVENT_CLICKED, nullptr);
@@ -488,7 +488,8 @@ void tick() {
                     lv_obj_t *btn = lv_list_add_btn(listNetworks, symbol, net.ssid.c_str());
                     lv_obj_set_style_text_font(btn, &ui_font_22, 0);
                     lv_obj_set_style_text_color(btn, lv_color_hex(kText), 0);
-                    lv_obj_set_style_bg_opa(btn, 20, 0);
+                    lv_obj_set_style_bg_color(btn, lv_color_hex(kButton), 0);
+                    lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
                     lv_obj_set_style_radius(btn, 12, 0);
                     lv_obj_add_event_cb(btn, onNetworkClicked, LV_EVENT_CLICKED, nullptr);
                 }

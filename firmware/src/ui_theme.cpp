@@ -22,24 +22,24 @@ lv_obj_t *makeCard(lv_obj_t *parent, lv_coord_t x, lv_coord_t y,
     lv_obj_set_size(card, w, h);
     lv_obj_set_pos(card, x, y);
 
-    // Milchglas: helle Fläche mit geringer Deckkraft
-    lv_obj_set_style_bg_color(card, lv_color_hex(kGlass), 0);
-    lv_obj_set_style_bg_opa(card, kGlassOpa, 0);
-    // Ein zarter Verlauf innerhalb der Fläche lässt sie plastisch wirken,
-    // so wie Licht, das von oben auf eine Scheibe fällt.
-    lv_obj_set_style_bg_grad_color(card, lv_color_hex(0x000000), 0);
-    lv_obj_set_style_bg_grad_dir(card, LV_GRAD_DIR_VER, 0);
+    // Deckende Fläche statt echter Durchsichtigkeit: Sie ist etwas heller als
+    // der Grund und wirkt dadurch wie eine Scheibe – kostet aber kein
+    // Verrechnen mit dem Untergrund. Das ist der Unterschied zwischen einem
+    // ruhigen und einem unruhigen Bild (siehe Kopf von ui_theme.h).
+    lv_obj_set_style_bg_color(card, lv_color_hex(kCard), 0);
+    lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_grad_dir(card, LV_GRAD_DIR_NONE, 0);
 
     lv_obj_set_style_radius(card, 22, 0);
+    // Der helle Rand macht den „gläsernen" Eindruck aus; er ist nur ein Pixel
+    // breit und damit praktisch umsonst.
     lv_obj_set_style_border_width(card, 1, 0);
-    lv_obj_set_style_border_color(card, lv_color_hex(kGlass), 0);
-    lv_obj_set_style_border_opa(card, kGlassBorderOpa, 0);
+    lv_obj_set_style_border_color(card, lv_color_hex(kCardBorder), 0);
+    lv_obj_set_style_border_opa(card, LV_OPA_COVER, 0);
 
-    // Weicher Schatten nach unten – hebt die Fläche vom Grund ab.
-    lv_obj_set_style_shadow_width(card, 24, 0);
-    lv_obj_set_style_shadow_ofs_y(card, 6, 0);
-    lv_obj_set_style_shadow_color(card, lv_color_hex(0x000000), 0);
-    lv_obj_set_style_shadow_opa(card, 70, 0);
+    // Kein Schatten: Ein weicher Schatten ist eine Weichzeichnung rund um die
+    // ganze Karte und war der teuerste Einzelposten der alten Gestaltung.
+    lv_obj_set_style_shadow_width(card, 0, 0);
 
     lv_obj_set_style_pad_all(card, 16, 0);
     lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
@@ -88,23 +88,21 @@ namespace {
 
 void styleButton(lv_obj_t *btn, uint32_t color) {
     const bool neutral = (color == 0);
-    lv_obj_set_style_bg_color(btn, lv_color_hex(neutral ? kGlass : color), 0);
-    // Farbige Knöpfe sind kräftiger, neutrale bleiben gläsern.
-    lv_obj_set_style_bg_opa(btn, neutral ? kGlassOpa : LV_OPA_80, 0);
+    lv_obj_set_style_bg_color(btn, lv_color_hex(neutral ? kButton : color), 0);
+    lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_grad_dir(btn, LV_GRAD_DIR_NONE, 0);
     lv_obj_set_style_radius(btn, 16, 0);
     lv_obj_set_style_border_width(btn, 1, 0);
-    lv_obj_set_style_border_color(btn, lv_color_hex(kGlass), 0);
-    lv_obj_set_style_border_opa(btn, kGlassBorderOpa, 0);
-    lv_obj_set_style_shadow_width(btn, 12, 0);
-    lv_obj_set_style_shadow_ofs_y(btn, 3, 0);
-    lv_obj_set_style_shadow_opa(btn, 60, 0);
+    lv_obj_set_style_border_color(btn, lv_color_hex(kCardBorder), 0);
+    lv_obj_set_style_shadow_width(btn, 0, 0);
 
     // Gedrückt: heller und leicht eingesunken – eine Rückmeldung, die man
-    // auch ohne Ton bemerkt.
-    lv_obj_set_style_bg_opa(btn, neutral ? 90 : LV_OPA_COVER, LV_STATE_PRESSED);
+    // auch ohne Ton bemerkt. Eine Farbänderung kostet nichts extra.
+    lv_obj_set_style_bg_color(btn, lv_color_hex(neutral ? kButtonPressed : color),
+                              LV_STATE_PRESSED);
     lv_obj_set_style_translate_y(btn, 2, LV_STATE_PRESSED);
     // Ausgegraut: sichtbar, aber erkennbar nicht benutzbar.
-    lv_obj_set_style_bg_opa(btn, 12, LV_STATE_DISABLED);
+    lv_obj_set_style_bg_color(btn, lv_color_hex(kBackgroundTop), LV_STATE_DISABLED);
     lv_obj_set_style_text_opa(btn, LV_OPA_50, LV_STATE_DISABLED);
 }
 

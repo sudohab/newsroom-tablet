@@ -1,13 +1,24 @@
 // Gestaltung der Oberfläche: Farben, Glasflächen, Knöpfe.
 //
-// Gewünscht ist ein moderner, „gläserner" Look. LVGL 8 kann den Hintergrund
-// nicht wirklich weichzeichnen (dafür fehlt dem Mikrocontroller die Leistung),
-// aber der Eindruck entsteht auch so:
+// Gewünscht ist ein moderner, „gläserner" Look. Der erste Entwurf setzte auf
+// echte Durchsichtigkeit, Farbverläufe und weiche Schatten – und genau das war
+// zu teuer:
 //
-//   • ein dunkler Farbverlauf als Grund,
-//   • Flächen in Weiß mit sehr geringer Deckkraft darüber,
-//   • ein hauchdünner, hellerer Rand, der die Kante fängt,
-//   • großzügige Rundungen und ein weicher Schatten.
+// Der ESP32-S3 zeichnet alles mit dem Hauptprozessor, ohne Grafikbeschleuniger.
+// Eine durchsichtige Fläche zwingt ihn, für **jedes** Pixel den Untergrund zu
+// lesen und zu verrechnen; ein weicher Schatten kostet zusätzlich eine
+// Weichzeichnung über die ganze Kante. Und weil die Karten durchsichtig waren,
+// musste beim Weiterspringen der Uhr nicht nur die Uhr neu gezeichnet werden,
+// sondern alles darunter gleich mit. Das Ergebnis war ein unruhiges Bild –
+// nachgewiesen mit einer Testfirmware (src/paneltest.cpp), die nur ein festes
+// Bild anzeigt: dort steht alles ruhig.
+//
+// Deshalb jetzt „Glas-Optik zum kleinen Preis":
+//   • Karten mit **deckender** Farbe, die etwas heller ist als der Grund –
+//     sieht aus wie eine Scheibe, kostet aber kein Verrechnen,
+//   • ein feiner heller Rand, der die Kante fängt (das macht den Eindruck aus),
+//   • große Rundungen bleiben,
+//   • **keine** Schatten und keine Farbverläufe in den Karten.
 //
 // Alles an einem Ort, damit das Aussehen an einer Stelle geändert werden kann
 // und nicht in jeder Seite einzeln.
@@ -20,17 +31,19 @@ namespace ui_theme {
 // --- Farben -----------------------------------------------------------------
 constexpr uint32_t kBackgroundTop = 0x141821;    // Grund oben
 constexpr uint32_t kBackgroundBottom = 0x0a0c11; // Grund unten
-constexpr uint32_t kGlass = 0xffffff;            // Glasfläche (mit Deckkraft)
+constexpr uint32_t kCard = 0x1e232e;             // Karten: deckend, heller als der Grund
+constexpr uint32_t kCardBorder = 0x39404f;       // feiner Rand, der die Kante fängt
+constexpr uint32_t kButton = 0x2b3140;           // neutrale Knöpfe
+constexpr uint32_t kButtonPressed = 0x3d4557;    // gedrückt: heller
+constexpr uint32_t kGlass = 0xffffff;            // nur noch für Bildlaufleisten
 constexpr uint32_t kText = 0xf5f7fa;
 constexpr uint32_t kTextMuted = 0x98a2b3;
 constexpr uint32_t kAccent = 0x3b82f6;           // Blau für Bedienung
 constexpr uint32_t kAlarm = 0xef4444;            // Rot für Wecker aus
 constexpr uint32_t kCall = 0x22c55e;             // Grün für Anrufe
 
-// Deckkraft der Glasflächen. Höher wirkt wie Milchglas, niedriger wie eine
-// kaum sichtbare Scheibe.
-constexpr lv_opa_t kGlassOpa = 28;
-constexpr lv_opa_t kGlassBorderOpa = 60;
+// Der Hintergrund bleibt ein Farbverlauf: Er wird genau einmal gezeichnet und
+// danach von den deckenden Karten verdeckt – er kostet also nichts im Betrieb.
 
 // --- Bausteine --------------------------------------------------------------
 
