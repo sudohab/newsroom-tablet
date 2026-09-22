@@ -140,6 +140,17 @@ void setup() {
 }
 
 void loop() {
+    // Alle 30 Sekunden Temperatur und freien Speicher melden. Klingt nach
+    // Kleinkram, ist aber das Gegenmittel gegen Raterei: Wird der Chip heiss
+    // oder geht der Speicher zur Neige, sieht man es hier, statt es aus dem
+    // Bildverhalten zu erschliessen.
+    static uint32_t lastHealthMs = 0;
+    if (millis() - lastHealthMs > 30000) {
+        lastHealthMs = millis();
+        Serial.printf("[zustand] %.1f Grad, %u MHz, %u Byte intern frei\n",
+                      temperatureRead(), getCpuFrequencyMhz(), ESP.getFreeHeap());
+    }
+
     // Einrichtung per USB (Token, Pi-Adresse) – siehe serial_console.h
     serial_console::loop();
     wifi_manager::loop();

@@ -26,6 +26,11 @@ void printStatus() {
                   settings_store::hasApiToken() ? "hinterlegt" : "(keiner)");
     Serial.printf("Speicher:   %u Byte intern, %u Byte PSRAM frei\n",
                   ESP.getFreeHeap(), ESP.getFreePsram());
+    // Temperatur des Chips selbst. Ueber etwa 70 Grad wird es kritisch: Der
+    // Baustein arbeitet dann am Rand seiner Spezifikation, und das zeigt sich
+    // zuerst als unzuverlaessige Zeitablaeufe - also genau als unruhiges Bild.
+    Serial.printf("Chip:       %.1f Grad, Takt %u MHz\n",
+                  temperatureRead(), getCpuFrequencyMhz());
     Serial.println("-----------------------");
 }
 

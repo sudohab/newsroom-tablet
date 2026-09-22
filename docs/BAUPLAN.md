@@ -463,3 +463,19 @@ damit der Flash im Betrieb nicht mehr gebraucht wird. Das geht nur mit einem
 vollständigen ESP-IDF-Bau (`framework = arduino, espidf`) statt der
 vorgefertigten Arduino-Bibliotheken – ein größerer Umbau mit langer erster
 Übersetzung.
+
+### 2026-09-22 – Wärme und Speicher gemessen: beides unauffällig
+
+Hannes: „Der Espressif-Chip wird sehr heiß." Gemessen mit dem eingebauten
+Temperatursensor (`temperatureRead()`): **45–48 °C**, über Minuten stabil. Das
+fühlt sich am Finger heiß an, ist für diesen Baustein aber normal – kritisch
+wird es erst jenseits von etwa 80 °C. **Nicht die Ursache.**
+
+Dabei fiel etwas anderes auf: Der freie **interne** Speicher liegt im Betrieb
+bei rund 37 KB (beim Start 85 KB). Über 100 Sekunden beobachtet: konstant, also
+**kein Leck** – der Unterschied sind die offene TLS-Verbindung und die festen
+WLAN-Puffer. Knapp, aber stabil.
+
+Die Firmware meldet Temperatur, Takt und freien Speicher jetzt alle 30 Sekunden
+(`[zustand]`) und auf `STATUS`. Solche Fragen sind damit in einer Minute
+beantwortet statt in einer Bastelrunde.

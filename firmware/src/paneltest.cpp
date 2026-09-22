@@ -114,8 +114,10 @@ void drawTestImage() {
 void setup() {
     Serial.begin(115200);
     delay(300);
-    Serial.printf("\nStufentest: %d MHz Pixeltakt, Neusynchronisierung je Bild: %s\n",
-                  PANEL_PCLK_MHZ, PANEL_RESTART_EACH_FRAME ? "an" : "aus");
+    Serial.printf("\nStufentest: %d MHz Pixeltakt, Bounce-Puffer %d Zeilen, "
+                  "Neusynchronisierung je Bild: %s\n",
+                  PANEL_PCLK_MHZ, PANEL_BOUNCE_LINES,
+                  PANEL_RESTART_EACH_FRAME ? "an" : "aus");
 
     settings_store::begin();
 
@@ -130,7 +132,7 @@ void setup() {
         // Pixeltakt aus der Bauumgebung (siehe platformio.ini): So laesst sich
         // derselbe Test mit verschiedenen Takten fahren, ohne Code zu aendern.
         static_cast<BusRGB *>(lcdBus)->configRGB_FreqHz(PANEL_PCLK_MHZ * 1000 * 1000);
-        static_cast<BusRGB *>(lcdBus)->configRGB_BounceBufferSize(kWidth * 30);
+        static_cast<BusRGB *>(lcdBus)->configRGB_BounceBufferSize(kWidth * PANEL_BOUNCE_LINES);
     }
     if (!board->begin()) {
         Serial.println("Board begin fehlgeschlagen");
