@@ -92,15 +92,16 @@ void setup() {
     auto lcd = board->getLCD();
     auto lcdBus = lcd->getBus();
     if (lcdBus->getBasicAttributes().type == ESP_PANEL_BUS_TYPE_RGB) {
-        // Pixeltakt 21 MHz statt der 16 MHz aus der Bibliotheksvorlage.
+        // Pixeltakt 16 MHz - der Wert aus der Boarddefinition.
         //
-        // Aus dem Takt ergibt sich die Bildwiederholrate: Eine Zeile umfasst
-        // 800 sichtbare Pixel plus 20 Austastpixel, ein Bild 480 Zeilen plus
-        // 20. Bei 16 MHz sind das 16.000.000 / (820 x 500) = 39 Bilder je
-        // Sekunde - unter etwa 50 sieht das Auge das Flimmern. Mit 21 MHz sind
-        // es 51 Bilder je Sekunde. 21 MHz ist auch der Wert aus Waveshares
-        // eigenem Beispiel fuer dieses Board.
-        static_cast<BusRGB *>(lcdBus)->configRGB_FreqHz(21 * 1000 * 1000);
+        // Zwischenzeitlich standen hier 21 MHz, um das Flimmern durch eine
+        // hoehere Bildwiederholrate zu bekaempfen (39 statt 51 Bilder/s). Das
+        // eigentliche Flimmern hatte aber eine andere Ursache (Neustart-
+        // schleife, spaeter der Flash-Zugriff). Geblieben ist von 21 MHz nur
+        // der Nachteil: ein Viertel mehr Datenstrom aus dem PSRAM, jede
+        // Sekunde. Das zeigte sich als Streifen am linken Rand und als ein
+        // Bild, das ein paar Zeilen nach oben rutscht.
+        static_cast<BusRGB *>(lcdBus)->configRGB_FreqHz(16 * 1000 * 1000);
 
         // 20 Zeilen (800 x 20 Pixel x 24 = 800 x 480): zwei Puffer zu je
         // 32 KB, zusammen 64 KB internen RAM.

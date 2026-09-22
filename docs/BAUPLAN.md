@@ -135,6 +135,24 @@ mit Hannes:
 | 11 | **Startseite:** nächster Termin, wechselnde Schlagzeile (alle 2 min, reihum je Quelle), rechts drei Felder: verpasste Anrufe · laufender Sender · NINA | **fertig, auf dem Gerät** |
 | 12 | **Seiten:** Wetter · Termine (Monat + Liste) · Nachrichten · NINA · Anrufe · Radio (mit Lautstärke) · Wecker · WLAN | **fertig, auf dem Gerät** |
 | 13 | Anrufbeantworter-Nachrichten (braucht neuen Fritz!Box-Zugriff, TR-064) | später |
+| 14 | **Timer-Seite: vier Timer gleichzeitig** | später, Wunsch vom 23.09.2026 |
+
+**Etappe 14 – Timer (vorgemerkt, noch nicht gebaut).** Gewünscht:
+
+* **Vier Timer gleichzeitig**, unabhängig voneinander – z. B. Timer 1 auf
+  40 Minuten, Timer 2 auf 10 Minuten.
+* Auf der Timer-Seite sind **alle vier gleichzeitig sichtbar** mit ihrer
+  Restzeit.
+* Je Timer einzeln: **starten, pausieren, stoppen, löschen, wiederholen**.
+
+Offene Fragen, die vor dem Bauen zu klären sind:
+* **Wo laufen die Timer – im Tablet oder im Pi?** Im Pi wäre richtig, wenn ein
+  abgelaufener Timer hörbar sein soll (dort ist der Lautsprecher) und wenn er
+  einen Neustart des Tablets überleben soll. Im Tablet wäre einfacher, aber
+  stumm und flüchtig. Empfehlung: im Pi, mit eigener Schnittstelle
+  `/api/tablet/timers`; das Tablet zeigt und bedient nur.
+* **Was passiert beim Ablauf?** Ton über den Pi, Anzeige auf dem Tablet, oder
+  beides? Bis der Ton am Gerät da ist (MCP4725), bliebe nur der Pi.
 
 **Gestaltung:** flach, an den LVGL-Beispielen orientiert (Schalter, Knöpfe,
 waagerechtes Scrollen mit Einrasten).
