@@ -404,3 +404,26 @@ und danach von den Karten verdeckt.
 Die Testfirmware bleibt im Projekt (`pio run -d firmware -e paneltest -t upload`).
 Sie hat in einem Durchgang geklärt, was vier Runden Vermutung nicht geschafft
 haben – und beantwortet dieselbe Frage beim nächsten Mal sofort wieder.
+
+### 2026-09-22 – Flaches Design, und zwei weitere Kostentreiber
+
+Hannes wünscht sich den flachen Stil der iPhone-Oberflächen bis 2015:
+schlicht, ohne Glas. Das trifft sich gut – flach ist hier auch die schnellste
+Lösung.
+
+**Neues Aussehen** (`src/ui_theme.*`): schwarzer Grund, keine Kacheln, keine
+Rahmen, keine Schatten, keine Verläufe. Getrennt wird mit feinen Linien und
+Abstand. Bedienbares ist farbig (Blau), Abschaltendes rot, Anrufe grün.
+Knöpfe sind flache Flächen mit runden Ecken; auf neutraler Fläche ist die
+Schrift blau – das ersetzt den Rahmen.
+
+**Zwei Kostentreiber gefunden, die nichts mit dem Aussehen zu tun haben:**
+
+1. **Die Listen wurden bei jeder Änderung neu aufgebaut** – auch wenn sich nur
+   die Lautstärke geändert hatte. Das hieß: alle zwei Sekunden den halben
+   Bildschirm neu zeichnen. Jetzt zählt `tablet_state` getrennt, ob sich
+   *Termine oder Nachrichten* geändert haben (`consumeListsChanged`); nur dann
+   werden die Spalten neu gebaut.
+2. Der **Farbverlauf im Hintergrund** ist weg. Er musste bei jedem
+   freigelegten Stück neu berechnet werden; eine einzige deckende Farbe wird
+   einfach geschrieben.

@@ -1,24 +1,18 @@
-// Gestaltung der Oberfläche: Farben, Glasflächen, Knöpfe.
+// Gestaltung der Oberfläche: Farben, Flächen, Knöpfe, Listen.
 //
-// Gewünscht ist ein moderner, „gläserner" Look. Der erste Entwurf setzte auf
-// echte Durchsichtigkeit, Farbverläufe und weiche Schatten – und genau das war
-// zu teuer:
+// Stil: **flach**, wie die iPhone-Oberflächen bis 2015. Keine Schatten, keine
+// Farbverläufe, keine Durchsichtigkeit, keine Verzierungen. Was trennt, trennt
+// durch eine feine Linie oder durch Abstand; was wichtig ist, steht größer;
+// was bedienbar ist, ist farbig.
 //
-// Der ESP32-S3 zeichnet alles mit dem Hauptprozessor, ohne Grafikbeschleuniger.
-// Eine durchsichtige Fläche zwingt ihn, für **jedes** Pixel den Untergrund zu
-// lesen und zu verrechnen; ein weicher Schatten kostet zusätzlich eine
-// Weichzeichnung über die ganze Kante. Und weil die Karten durchsichtig waren,
-// musste beim Weiterspringen der Uhr nicht nur die Uhr neu gezeichnet werden,
-// sondern alles darunter gleich mit. Das Ergebnis war ein unruhiges Bild –
-// nachgewiesen mit einer Testfirmware (src/paneltest.cpp), die nur ein festes
-// Bild anzeigt: dort steht alles ruhig.
+// Das ist nicht nur Geschmack, sondern hier auch die schnellste Lösung: Der
+// ESP32-S3 zeichnet jedes Pixel mit dem Hauptprozessor. Eine deckende Fläche
+// wird einfach geschrieben; eine durchsichtige zwingt ihn, den Untergrund zu
+// lesen und zu verrechnen, ein weicher Schatten kommt einer Weichzeichnung
+// gleich. Flach ist also zugleich ruhig.
 //
-// Deshalb jetzt „Glas-Optik zum kleinen Preis":
-//   • Karten mit **deckender** Farbe, die etwas heller ist als der Grund –
-//     sieht aus wie eine Scheibe, kostet aber kein Verrechnen,
-//   • ein feiner heller Rand, der die Kante fängt (das macht den Eindruck aus),
-//   • große Rundungen bleiben,
-//   • **keine** Schatten und keine Farbverläufe in den Karten.
+// Nachweis, dass die Gestaltung die Ursache war: `src/paneltest.cpp` zeigt ein
+// festes Testbild ohne LVGL – dort steht das Bild ruhig.
 //
 // Alles an einem Ort, damit das Aussehen an einer Stelle geändert werden kann
 // und nicht in jeder Seite einzeln.
@@ -29,37 +23,39 @@
 namespace ui_theme {
 
 // --- Farben -----------------------------------------------------------------
-constexpr uint32_t kBackgroundTop = 0x141821;    // Grund oben
-constexpr uint32_t kBackgroundBottom = 0x0a0c11; // Grund unten
-constexpr uint32_t kCard = 0x1e232e;             // Karten: deckend, heller als der Grund
-constexpr uint32_t kCardBorder = 0x39404f;       // feiner Rand, der die Kante fängt
-constexpr uint32_t kButton = 0x2b3140;           // neutrale Knöpfe
-constexpr uint32_t kButtonPressed = 0x3d4557;    // gedrückt: heller
-constexpr uint32_t kGlass = 0xffffff;            // nur noch für Bildlaufleisten
-constexpr uint32_t kText = 0xf5f7fa;
-constexpr uint32_t kTextMuted = 0x98a2b3;
-constexpr uint32_t kAccent = 0x3b82f6;           // Blau für Bedienung
-constexpr uint32_t kAlarm = 0xef4444;            // Rot für Wecker aus
-constexpr uint32_t kCall = 0x22c55e;             // Grün für Anrufe
-
-// Der Hintergrund bleibt ein Farbverlauf: Er wird genau einmal gezeichnet und
-// danach von den deckenden Karten verdeckt – er kostet also nichts im Betrieb.
+// Dunkel gehalten: Das Gerät steht auf dem Nachttisch und soll nachts nicht
+// blenden. Die Akzentfarben sind die kräftigen Töne des flachen Stils.
+constexpr uint32_t kBackground = 0x000000;       // Grund: durchgehend schwarz
+constexpr uint32_t kSurface = 0x1c1c1e;          // abgesetzte Fläche (Knöpfe, Felder)
+constexpr uint32_t kSurfacePressed = 0x3a3a3c;   // gedrückt
+constexpr uint32_t kSeparator = 0x2c2c2e;        // feine Trennlinie
+constexpr uint32_t kText = 0xffffff;
+constexpr uint32_t kTextMuted = 0x8e8e93;        // Nebentexte, Überschriften
+constexpr uint32_t kAccent = 0x0a84ff;           // Blau: bedienbar
+constexpr uint32_t kAlarm = 0xff453a;            // Rot: abschalten, Warnung
+constexpr uint32_t kCall = 0x30d158;             // Grün: Anruf
+constexpr uint32_t kGlass = 0x48484a;            // Bildlaufleisten
 
 // --- Bausteine --------------------------------------------------------------
 
-// Hintergrund mit Farbverlauf auf eine Seite legen.
+// Grundfarbe auf eine Seite legen.
 void applyBackground(lv_obj_t *screen);
 
-// Eine Glasfläche (Karte). Gibt das Objekt zurück, in das der Inhalt kommt.
-lv_obj_t *makeCard(lv_obj_t *parent, lv_coord_t x, lv_coord_t y,
-                   lv_coord_t w, lv_coord_t h);
+// Ein Bereich der Seite. Flach heißt: keine Kachel mit Rahmen, sondern nur
+// eine Fläche ohne eigene Farbe. Getrennt wird mit `makeSeparator`.
+lv_obj_t *makeSection(lv_obj_t *parent, lv_coord_t x, lv_coord_t y,
+                      lv_coord_t w, lv_coord_t h);
+
+// Eine feine Trennlinie (waagerecht oder senkrecht).
+lv_obj_t *makeSeparator(lv_obj_t *parent, lv_coord_t x, lv_coord_t y,
+                        lv_coord_t w, lv_coord_t h);
 
 // Beschriftung mit Schrift und Farbe.
 lv_obj_t *makeLabel(lv_obj_t *parent, const lv_font_t *font, uint32_t color,
                     lv_align_t align, lv_coord_t x, lv_coord_t y,
                     const char *text = "");
 
-// Knopf im Glas-Stil. `color` färbt ihn ein (0 = neutrales Glas).
+// Knopf. `color` färbt die Fläche (0 = neutrale Fläche, Text farbig).
 lv_obj_t *makeButton(lv_obj_t *parent, const char *text, lv_event_cb_t handler,
                      lv_coord_t w, lv_coord_t h,
                      lv_align_t align, lv_coord_t x, lv_coord_t y,
@@ -83,5 +79,8 @@ lv_obj_t *addBarSpacer(lv_obj_t *bar);
 // scrollbar, mit dezenter Bildlaufleiste, Inhalte untereinander.
 lv_obj_t *makeScrollArea(lv_obj_t *parent, lv_coord_t x, lv_coord_t y,
                          lv_coord_t w, lv_coord_t h);
+
+// Einen Listeneintrag (Sender, WLAN-Netz) flach gestalten.
+void styleListButton(lv_obj_t *btn);
 
 }  // namespace ui_theme

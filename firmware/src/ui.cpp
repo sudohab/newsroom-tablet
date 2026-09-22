@@ -185,57 +185,61 @@ void buildHomeScreen() {
     screenHome = lv_obj_create(nullptr);
     applyBackground(screenHome);
 
-    // --- Kopfzeile: Uhr, Datum, Weckruf, Wetter ---------------------------
-    lv_obj_t *header = makeCard(screenHome, 20, 16, 760, 104);
-    labelClock = makeLabel(header, &ui_font_56, kText, LV_ALIGN_LEFT_MID, 8, -2, "--:--");
-    labelDate = makeLabel(header, &ui_font_22, kTextMuted, LV_ALIGN_LEFT_MID, 220, -18,
+    // --- Kopf: Uhr, Datum, Weckruf, Wetter --------------------------------
+    // Flach heißt: keine Kachel drumherum. Die Uhrzeit steht groß links, der
+    // Rest ordnet sich ihr unter; getrennt wird mit einer feinen Linie.
+    labelClock = makeLabel(screenHome, &ui_font_56, kText, LV_ALIGN_TOP_LEFT, 28, 18, "--:--");
+    labelDate = makeLabel(screenHome, &ui_font_22, kTextMuted, LV_ALIGN_TOP_LEFT, 240, 26,
                           cfg::kDeviceName);
-    labelAlarm = makeLabel(header, &ui_font_22, kText, LV_ALIGN_LEFT_MID, 220, 16,
+    labelAlarm = makeLabel(screenHome, &ui_font_22, kText, LV_ALIGN_TOP_LEFT, 240, 58,
                            "Weckruf –");
-    labelWeather = makeLabel(header, &ui_font_30, kText, LV_ALIGN_RIGHT_MID, -8, -16);
-    labelStatus = makeLabel(header, &ui_font_18, kTextMuted, LV_ALIGN_RIGHT_MID, -8, 20);
+    labelWeather = makeLabel(screenHome, &ui_font_30, kText, LV_ALIGN_TOP_RIGHT, -28, 24);
+    labelStatus = makeLabel(screenHome, &ui_font_18, kTextMuted, LV_ALIGN_TOP_RIGHT, -28, 64);
 
-    // --- Spalten: Termine und Nachrichten, beide zum Scrollen -------------
-    lv_obj_t *cardEvents = makeCard(screenHome, 20, 132, 370, 252);
-    makeLabel(cardEvents, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 0, 0, "TERMINE");
-    areaEvents = makeScrollArea(cardEvents, 0, 32, 338, 186);
+    makeSeparator(screenHome, 28, 104, 744, 1);
 
-    lv_obj_t *cardNews = makeCard(screenHome, 410, 132, 370, 252);
-    makeLabel(cardNews, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 0, 0, "NACHRICHTEN");
-    areaNews = makeScrollArea(cardNews, 0, 32, 338, 186);
+    // --- Zwei Spalten: Termine und Nachrichten ----------------------------
+    makeLabel(screenHome, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 28, 122, "TERMINE");
+    areaEvents = makeScrollArea(screenHome, 28, 152, 348, 230);
+
+    // Senkrechte Trennlinie zwischen den Spalten
+    makeSeparator(screenHome, 400, 122, 1, 260);
+
+    makeLabel(screenHome, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 424, 122, "NACHRICHTEN");
+    areaNews = makeScrollArea(screenHome, 424, 152, 348, 230);
+
+    makeSeparator(screenHome, 28, 396, 744, 1);
 
     // --- Bedienleiste -----------------------------------------------------
     // Die Knöpfe liegen in einer Leiste, die ihre Abstände selbst berechnet.
     // Von Hand gesetzte Koordinaten waren die Ursache dafür, dass sich Knöpfe
     // überlappten, sobald eine Beschriftung länger wurde.
-    lv_obj_t *bar = makeButtonBar(screenHome, 20, 400, 760, 60);
-    btnSnooze = addBarButton(bar, "Schlummern", onSnoozeClicked, 150, 54, kAccent);
-    btnAlarmOff = addBarButton(bar, "Aus", onAlarmOffClicked, 80, 54, kAlarm);
-    addBarButton(bar, "–", onVolumeDownClicked, 54, 54);
-    // Die Lautstärke steht zwischen den beiden Tasten und ist mittig
-    // ausgerichtet, damit "5%" und "100%" gleich sitzen.
+    lv_obj_t *bar = makeButtonBar(screenHome, 28, 412, 744, 54);
+    btnSnooze = addBarButton(bar, "Schlummern", onSnoozeClicked, 150, 46, kAccent);
+    btnAlarmOff = addBarButton(bar, "Aus", onAlarmOffClicked, 80, 46, kAlarm);
+    addBarButton(bar, "–", onVolumeDownClicked, 52, 46);
     labelVolume = lv_label_create(bar);
     lv_obj_set_style_text_font(labelVolume, &ui_font_22, 0);
     lv_obj_set_style_text_color(labelVolume, lv_color_hex(kText), 0);
     lv_obj_set_width(labelVolume, 64);
     lv_obj_set_style_text_align(labelVolume, LV_TEXT_ALIGN_CENTER, 0);
     lv_label_set_text(labelVolume, "--%");
-    addBarButton(bar, "+", onVolumeUpClicked, 54, 54);
+    addBarButton(bar, "+", onVolumeUpClicked, 52, 46);
     addBarSpacer(bar);
-    addBarButton(bar, "Radio", onRadioPageClicked, 110, 54);
-    addBarButton(bar, "WLAN", onWifiPageClicked, 110, 54);
+    addBarButton(bar, "Radio", onRadioPageClicked, 110, 46);
+    addBarButton(bar, "WLAN", onWifiPageClicked, 110, 46);
 
     labelMessage = makeLabel(screenHome, &ui_font_18, kTextMuted,
-                             LV_ALIGN_TOP_MID, 0, 388);
+                             LV_ALIGN_TOP_MID, 0, 374);
 
-    // --- Anrufbanner: liegt über allem, sonst unsichtbar -------------------
-    bannerCall = makeCard(screenHome, 60, 180, 680, 120);
+    // --- Anruf: füllt beim Klingeln die Mitte, sonst unsichtbar ------------
+    bannerCall = makeSection(screenHome, 0, 150, 800, 180);
     lv_obj_set_style_bg_color(bannerCall, lv_color_hex(kCall), 0);
     lv_obj_set_style_bg_opa(bannerCall, LV_OPA_COVER, 0);
     lv_obj_add_flag(bannerCall, LV_OBJ_FLAG_HIDDEN);
     labelCall = lv_label_create(bannerCall);
     lv_obj_set_style_text_font(labelCall, &ui_font_30, 0);
-    lv_obj_set_style_text_color(labelCall, lv_color_hex(0xffffff), 0);
+    lv_obj_set_style_text_color(labelCall, lv_color_hex(0x000000), 0);
     lv_obj_center(labelCall);
 }
 
@@ -243,53 +247,58 @@ void buildRadioScreen() {
     screenRadio = lv_obj_create(nullptr);
     applyBackground(screenRadio);
 
-    lv_obj_t *card = makeCard(screenRadio, 20, 16, 470, 448);
-    makeLabel(card, &ui_font_30, kText, LV_ALIGN_TOP_LEFT, 0, 0, "Radio");
+    makeLabel(screenRadio, &ui_font_30, kText, LV_ALIGN_TOP_LEFT, 28, 20, "Radio");
+    labelRadioStatus = makeLabel(screenRadio, &ui_font_18, kTextMuted,
+                                 LV_ALIGN_TOP_RIGHT, -28, 28);
+    makeSeparator(screenRadio, 28, 68, 744, 1);
+
     // Die Favoritenliste ist scrollbar – es können mehr Sender sein, als auf
     // den Bildschirm passen.
-    listStations = lv_list_create(card);
-    lv_obj_set_size(listStations, 438, 356);
-    lv_obj_align(listStations, LV_ALIGN_TOP_LEFT, 0, 50);
+    listStations = lv_list_create(screenRadio);
+    lv_obj_set_size(listStations, 460, 368);
+    lv_obj_align(listStations, LV_ALIGN_TOP_LEFT, 28, 86);
     lv_obj_set_style_bg_opa(listStations, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(listStations, 0, 0);
     lv_obj_set_style_pad_all(listStations, 0, 0);
+    lv_obj_set_style_pad_row(listStations, 8, 0);
 
-    labelRadioStatus = makeLabel(screenRadio, &ui_font_18, kTextMuted,
-                                 LV_ALIGN_TOP_RIGHT, -20, 30);
-
-    makeButton(screenRadio, "Aus", onRadioStopClicked, 250, 54,
-               LV_ALIGN_TOP_RIGHT, -20, 70, kAlarm);
-    // Die beiden Timer-Knöpfe in einer eigenen Leiste: So bleibt der Abstand
-    // zwischen ihnen richtig, auch wenn die Beschriftung sich ändert.
-    lv_obj_t *timerBar = makeButtonBar(screenRadio, 530, 140, 250, 60);
-    addBarButton(timerBar, "30 Min", onSleep30Clicked, 120, 54);
-    addBarButton(timerBar, "60 Min", onSleep60Clicked, 120, 54);
-    makeButton(screenRadio, "Timer aus", onSleepCancelClicked, 250, 54,
-               LV_ALIGN_TOP_RIGHT, -20, 210);
-    makeButton(screenRadio, "Zurück", onBackClicked, 250, 54,
-               LV_ALIGN_BOTTOM_RIGHT, -20, -16);
+    makeButton(screenRadio, "Aus", onRadioStopClicked, 250, 46,
+               LV_ALIGN_TOP_RIGHT, -28, 90, kAlarm);
+    lv_obj_t *timerBar = makeButtonBar(screenRadio, 522, 150, 250, 46);
+    addBarButton(timerBar, "30 Min", onSleep30Clicked, 120, 46);
+    addBarButton(timerBar, "60 Min", onSleep60Clicked, 120, 46);
+    makeButton(screenRadio, "Timer aus", onSleepCancelClicked, 250, 46,
+               LV_ALIGN_TOP_RIGHT, -28, 210);
+    makeButton(screenRadio, "Zurück", onBackClicked, 250, 46,
+               LV_ALIGN_BOTTOM_RIGHT, -28, -20);
 }
 
 void buildWifiScreen() {
     screenWifi = lv_obj_create(nullptr);
     applyBackground(screenWifi);
 
-    lv_obj_t *card = makeCard(screenWifi, 20, 16, 400, 296);
-    makeLabel(card, &ui_font_30, kText, LV_ALIGN_TOP_LEFT, 0, 0, "WLAN");
-    listNetworks = lv_list_create(card);
-    lv_obj_set_size(listNetworks, 368, 206);
-    lv_obj_align(listNetworks, LV_ALIGN_TOP_LEFT, 0, 50);
+    makeLabel(screenWifi, &ui_font_30, kText, LV_ALIGN_TOP_LEFT, 28, 20, "WLAN");
+    makeSeparator(screenWifi, 28, 68, 744, 1);
+
+    listNetworks = lv_list_create(screenWifi);
+    lv_obj_set_size(listNetworks, 380, 210);
+    lv_obj_align(listNetworks, LV_ALIGN_TOP_LEFT, 28, 86);
     lv_obj_set_style_bg_opa(listNetworks, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(listNetworks, 0, 0);
     lv_obj_set_style_pad_all(listNetworks, 0, 0);
+    lv_obj_set_style_pad_row(listNetworks, 8, 0);
 
-    lv_obj_t *side = makeCard(screenWifi, 440, 16, 340, 296);
-    labelSelected = makeLabel(side, &ui_font_22, kText, LV_ALIGN_TOP_LEFT, 0, 0, "Netz: –");
+    labelSelected = makeLabel(screenWifi, &ui_font_22, kText,
+                              LV_ALIGN_TOP_LEFT, 440, 86, "Netz: –");
 
-    inputPassword = lv_textarea_create(side);
-    lv_obj_set_size(inputPassword, 308, 52);
-    lv_obj_align(inputPassword, LV_ALIGN_TOP_LEFT, 0, 36);
+    inputPassword = lv_textarea_create(screenWifi);
+    lv_obj_set_size(inputPassword, 332, 50);
+    lv_obj_align(inputPassword, LV_ALIGN_TOP_LEFT, 440, 124);
     lv_obj_set_style_text_font(inputPassword, &ui_font_22, 0);
+    lv_obj_set_style_bg_color(inputPassword, lv_color_hex(kSurface), 0);
+    lv_obj_set_style_border_width(inputPassword, 0, 0);
+    lv_obj_set_style_radius(inputPassword, 10, 0);
+    lv_obj_set_style_text_color(inputPassword, lv_color_hex(kText), 0);
     lv_textarea_set_one_line(inputPassword, true);
     // Eingabe als Punkte anzeigen: Das WLAN-Passwort soll nicht offen auf
     // einem Bildschirm im Wohnzimmer stehen.
@@ -297,16 +306,19 @@ void buildWifiScreen() {
     lv_textarea_set_max_length(inputPassword, settings_store::kMaxPassword);
     lv_textarea_set_placeholder_text(inputPassword, "WLAN-Passwort");
 
-    labelWifiHint = makeLabel(side, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 0, 100);
+    labelWifiHint = makeLabel(screenWifi, &ui_font_18, kTextMuted,
+                              LV_ALIGN_TOP_LEFT, 440, 186);
 
-    makeButton(side, "Suchen", onScanClicked, 148, 52, LV_ALIGN_TOP_LEFT, 0, 134);
-    makeButton(side, "Verbinden", onConnectClicked, 148, 52,
-               LV_ALIGN_TOP_LEFT, 160, 134, kAccent);
-    makeButton(side, "Zurück", onBackClicked, 148, 52, LV_ALIGN_TOP_LEFT, 0, 196);
+    lv_obj_t *wifiBar = makeButtonBar(screenWifi, 440, 220, 332, 46);
+    addBarButton(wifiBar, "Suchen", onScanClicked, 150, 46);
+    addBarButton(wifiBar, "Verbinden", onConnectClicked, 150, 46, kAccent);
+    makeButton(screenWifi, "Zurück", onBackClicked, 150, 46,
+               LV_ALIGN_TOP_LEFT, 440, 280);
 
     keyboard = lv_keyboard_create(screenWifi);
-    lv_obj_set_size(keyboard, 800, 160);
+    lv_obj_set_size(keyboard, 800, 150);
     lv_obj_align(keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_bg_color(keyboard, lv_color_hex(kBackground), 0);
     lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN);
 }
 
@@ -331,6 +343,36 @@ void updateClock() {
     snprintf(dateBuf, sizeof(dateBuf), "%s, %d.%d.%d",
              wochentage[now.tm_wday % 7], now.tm_mday, now.tm_mon + 1, now.tm_year + 1900);
     lv_label_set_text(labelDate, dateBuf);
+}
+
+// Baut die beiden Spalten neu auf. Teuer: Für jeden Eintrag entstehen ein bis
+// zwei Beschriftungen, und der halbe Bildschirm wird neu gezeichnet. Deshalb
+// wird das nur aufgerufen, wenn sich Termine oder Nachrichten wirklich
+// geändert haben – nicht bei jeder Lautstärkeänderung.
+void rebuildLists() {
+    const tablet_state::Snapshot &state = tablet_state::current();
+
+    lv_obj_clean(areaEvents);
+    if (state.events.empty()) {
+        addLine(areaEvents, "Keine Termine", &ui_font_22, kTextMuted, 340);
+    }
+    for (const auto &event : state.events) {
+        // Zeile 1: Tag und Uhrzeit, klein. Zeile 2: der Termin selbst.
+        addLine(areaEvents, event.time.isEmpty() ? event.when : event.when + "  " + event.time,
+                &ui_font_18, kTextMuted, 340);
+        addLine(areaEvents, event.title, &ui_font_22, kText, 340);
+    }
+
+    lv_obj_clean(areaNews);
+    if (state.news.empty()) {
+        addLine(areaNews, "Keine Nachrichten", &ui_font_22, kTextMuted, 340);
+    }
+    for (const auto &headline : state.news) {
+        if (!headline.source.isEmpty()) {
+            addLine(areaNews, headline.source, &ui_font_18, kTextMuted, 340);
+        }
+        addLine(areaNews, headline.title, &ui_font_22, kText, 340);
+    }
 }
 
 // Überträgt den zuletzt geholten Stand in die Anzeige. Läuft unter der
@@ -358,30 +400,6 @@ void applySnapshot() {
         setText(labelStatus, "Läuft: " + state.mediaTitle);
     } else {
         setText(labelStatus, "");
-    }
-
-    // --- Spalte Termine ---------------------------------------------------
-    lv_obj_clean(areaEvents);
-    if (state.events.empty()) {
-        addLine(areaEvents, "Keine Termine", &ui_font_22, kTextMuted, 330);
-    }
-    for (const auto &event : state.events) {
-        // Zeile 1: Tag und Uhrzeit, klein. Zeile 2: der Termin selbst.
-        addLine(areaEvents, event.time.isEmpty() ? event.when : event.when + "  " + event.time,
-                &ui_font_18, kTextMuted, 330);
-        addLine(areaEvents, event.title, &ui_font_22, kText, 330);
-    }
-
-    // --- Spalte Nachrichten ----------------------------------------------
-    lv_obj_clean(areaNews);
-    if (state.news.empty()) {
-        addLine(areaNews, "Keine Nachrichten", &ui_font_22, kTextMuted, 330);
-    }
-    for (const auto &headline : state.news) {
-        if (!headline.source.isEmpty()) {
-            addLine(areaNews, headline.source, &ui_font_18, kTextMuted, 330);
-        }
-        addLine(areaNews, headline.title, &ui_font_22, kText, 330);
     }
 
     // --- Anruf ------------------------------------------------------------
@@ -417,6 +435,7 @@ void begin() {
     buildRadioScreen();
     buildWifiScreen();
     lv_scr_load(screenHome);
+    rebuildLists();
     applySnapshot();
     lvgl_port_unlock();
 }
@@ -431,9 +450,12 @@ void tick() {
         lvgl_port_unlock();
     }
 
-    // Neue Daten vom Pi? Dann die Anzeige nachziehen.
-    if (tablet_state::consumeChanged()) {
+    // Neue Daten vom Pi? Dann die Anzeige nachziehen. Die beiden Listen nur,
+    // wenn sich ihr Inhalt geändert hat – sie kosten am meisten.
+    const bool listsChanged = tablet_state::consumeListsChanged();
+    if (tablet_state::consumeChanged() || listsChanged) {
         lvgl_port_lock(-1);
+        if (listsChanged) rebuildLists();
         applySnapshot();
         lvgl_port_unlock();
     }
@@ -462,13 +484,7 @@ void tick() {
             for (const auto &station : stations) {
                 lv_obj_t *btn = lv_list_add_btn(listStations, LV_SYMBOL_AUDIO,
                                                 station.name.c_str());
-                lv_obj_set_style_text_font(btn, &ui_font_22, 0);
-                lv_obj_set_style_text_color(btn, lv_color_hex(kText), 0);
-                lv_obj_set_style_bg_color(btn, lv_color_hex(kButton), 0);
-                lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
-                lv_obj_set_style_bg_color(btn, lv_color_hex(kButtonPressed), LV_STATE_PRESSED);
-                lv_obj_set_style_radius(btn, 12, 0);
-                lv_obj_set_style_pad_all(btn, 12, 0);
+                styleListButton(btn);
                 lv_obj_add_event_cb(btn, onStationClicked, LV_EVENT_CLICKED, nullptr);
             }
             setText(labelRadioStatus, !error.isEmpty() ? error
@@ -486,11 +502,7 @@ void tick() {
                 for (const auto &net : networks) {
                     const char *symbol = net.encrypted ? LV_SYMBOL_WIFI : LV_SYMBOL_WARNING;
                     lv_obj_t *btn = lv_list_add_btn(listNetworks, symbol, net.ssid.c_str());
-                    lv_obj_set_style_text_font(btn, &ui_font_22, 0);
-                    lv_obj_set_style_text_color(btn, lv_color_hex(kText), 0);
-                    lv_obj_set_style_bg_color(btn, lv_color_hex(kButton), 0);
-                    lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
-                    lv_obj_set_style_radius(btn, 12, 0);
+                    styleListButton(btn);
                     lv_obj_add_event_cb(btn, onNetworkClicked, LV_EVENT_CLICKED, nullptr);
                 }
                 setText(labelWifiHint, networks.empty()

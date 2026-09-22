@@ -12,6 +12,18 @@ namespace {
 
 Snapshot snapshot;
 bool changed = false;
+bool listsChanged = false;
+
+// Vergleicht zwei Listen anhand dessen, was angezeigt wird.
+template <typename T>
+bool sameList(const std::vector<T> &a, const std::vector<T> &b,
+              bool (*equal)(const T &, const T &)) {
+    if (a.size() != b.size()) return false;
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (!equal(a[i], b[i])) return false;
+    }
+    return true;
+}
 uint32_t lastPollMs = 0;
 // Nach einem Fehler nicht sofort wieder anklopfen – sonst hängt die Schleife
 // bei einem abgeschalteten Pi dauerhaft im Zeitlimit fest.
@@ -127,19 +139,30 @@ void parse(const String &body) {
         && next.mediaTitle == snapshot.mediaTitle
         && next.volume == snapshot.volume
         && next.configVersion == snapshot.configVersion
-        && next.commandId == snapshot.commandId
-        && next.events.size() == snapshot.events.size()
-        && next.news.size() == snapshot.news.size()
-        && (next.events.empty() || next.events[0].title == snapshot.events[0].title)
-        && (next.news.empty() || next.news[0].title == snapshot.news[0].title);
+        && next.commandId == snapshot.commandId;
+
+    // Die Listen getrennt vergleichen: Sie kosten beim Neuaufbau am meisten.
+    const bool sameEvents = sameList<Snapshot::Event>(
+        next.events, snapshot.events,
+        [](const Snapshot::Event &a, const Snapshot::Event &b) {
+            return a.title == b.title && a.when == b.when && a.time == b.time;
+        });
+    const bool sameNews = sameList<Snapshot::Headline>(
+        next.news, snapshot.news,
+        [](const Snapshot::Headline &a, const Snapshot::Headline &b) {
+            return a.title == b.title && a.source == b.source;
+        });
+
     snapshot = next;
     if (!same) changed = true;
+    if (!sameEvents || !sameNews) listsChanged = true;
 }
 
 }  // namespace
 
 void begin() {
     snapshot = Snapshot();
+    listsChanged = true;   // beim ersten Zeichnen einmal alles aufbauen
     snapshot.error = "Noch keine Verbindung";
 }
 
@@ -174,6 +197,12 @@ const Snapshot &current() { return snapshot; }
 bool consumeChanged() {
     const bool value = changed;
     changed = false;
+    return value;
+}
+
+bool consumeListsChanged() {
+    const bool value = listsChanged;
+    listsChanged = false;
     return value;
 }
 

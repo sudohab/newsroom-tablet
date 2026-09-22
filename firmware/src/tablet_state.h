@@ -72,9 +72,18 @@ void loop();
 // online = false), damit die Uhr nicht plötzlich leer ist.
 const Snapshot &current();
 
-// True, sobald sich seit dem letzten Abruf etwas geändert hat (die
-// Oberfläche zeichnet dann neu).
+// True, sobald sich seit dem letzten Abruf etwas geändert hat (Uhrzeit,
+// Wecker, Wetter, Lautstärke …). Die Oberfläche zieht dann ihre Beschriftungen
+// nach.
 bool consumeChanged();
+
+// True nur, wenn sich **Termine oder Nachrichten** geändert haben.
+//
+// Getrennt gezählt, weil die beiden Listen teuer sind: Sie werden dafür
+// vollständig neu aufgebaut. Das bei jeder Lautstärkeänderung zu tun, hieße,
+// alle zwei Sekunden den halben Bildschirm neu zu zeichnen – sichtbar als
+// Unruhe im Bild.
+bool consumeListsChanged();
 
 // Eine Aktion an den Pi schicken (z. B. "snooze"). Blockiert bis zu acht
 // Sekunden – nur aus der Hauptschleife aufrufen, nie aus einem LVGL-Rückruf.
