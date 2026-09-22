@@ -356,3 +356,21 @@ vor dem Start von LVGL, 95 KB danach, Abrufe laufen fehlerfrei.
 weil ich das Sichtbare (Flackern) gedeutet habe, statt das Log zu lesen.
 Deshalb meldet das Gerät jetzt bei jedem Start, wie viel interner Speicher vor
 dem Start von LVGL frei ist.
+
+### 2026-09-22 – „Hüpft und verschiebt sich nach oben": Bilddrift
+
+Zwei verschiedene Fehler, die sich ähnlich anfühlen:
+
+* **Flimmern** = zu niedrige Bildwiederholrate → Pixeltakt von 16 auf 21 MHz
+  (39 → 51 Bilder/s), wie in Waveshares eigenem Beispiel.
+* **Drift** = das Bild springt nach oben und bleibt schief. Das RGB-Panel hat
+  keinen eigenen Bildspeicher; der ESP32 schiebt die Zeilen im festen Takt
+  hinaus. Verliert diese Übertragung **einmal** den Gleichlauf – etwa weil der
+  PSRAM kurz nicht schnell genug liefert –, bleibt der Versatz dauerhaft.
+
+Gegenmaßnahme: `esp_lcd_rgb_panel_restart()` nach jedem Bild. Die Funktion
+merkt sich den Wunsch nur; der Neuanfang passiert beim nächsten Bildwechsel
+und ist deshalb nicht sichtbar. ESP-IDF hat dafür die Einstellung
+`LCD_RGB_RESTART_IN_VSYNC`; mit dem vorgefertigten Arduino-Kern lässt sie sich
+nicht setzen, deshalb hängt die Firmware sich selbst in den Rückruf „Bild
+fertig" und macht genau dasselbe.
