@@ -130,10 +130,10 @@ mit Hannes:
 
 | # | Inhalt | Stand |
 |---|---|---|
-| 9 | **Pi-Seite:** Wetterdetails, Termine mit Ort + Monatsübersicht, Nachrichten je Quelle, NINA-Warnungen, verpasste Anrufe, Wecker stellen | offen |
-| 10 | **Rahmen:** gemeinsame Kopfzeile (Uhr, Datum, Wecker, Wetter) auf allen Seiten + **waagerecht scrollbare Menüleiste** unten | offen |
-| 11 | **Startseite:** nächster Termin, wechselnde Schlagzeile (alle 2 min, reihum je Quelle), rechts drei Felder: verpasste Anrufe · laufender Sender · NINA | offen |
-| 12 | **Seiten:** Wetter · Termine (Monat + Liste) · Nachrichten · NINA · Anrufe · Radio (mit Lautstärke) · Wecker · WLAN | offen |
+| 9 | **Pi-Seite:** Wetterdetails, Termine mit Ort + Monatsübersicht, Nachrichten je Quelle, NINA-Warnungen, verpasste Anrufe, Wecker stellen | **fertig** |
+| 10 | **Rahmen:** gemeinsame Kopfzeile (Uhr, Datum, Wecker, Wetter) auf allen Seiten + **waagerecht scrollbare Menüleiste** unten | **fertig, auf dem Gerät** |
+| 11 | **Startseite:** nächster Termin, wechselnde Schlagzeile (alle 2 min, reihum je Quelle), rechts drei Felder: verpasste Anrufe · laufender Sender · NINA | **fertig, auf dem Gerät** |
+| 12 | **Seiten:** Wetter · Termine (Monat + Liste) · Nachrichten · NINA · Anrufe · Radio (mit Lautstärke) · Wecker · WLAN | **fertig, auf dem Gerät** |
 | 13 | Anrufbeantworter-Nachrichten (braucht neuen Fritz!Box-Zugriff, TR-064) | später |
 
 **Gestaltung:** flach, an den LVGL-Beispielen orientiert (Schalter, Knöpfe,
@@ -560,3 +560,46 @@ Entscheidend (nachgeprüft in der erzeugten `sdkconfig`):
 und sie internen RAM fraßen (nur noch 14 KB frei, die Abfragen scheiterten):
 `WiFi.useStaticBuffers(true)` und der 30-Zeilen-Bounce-Puffer (jetzt 10).
 Danach: **55 KB frei, Abfragen fehlerfrei, 51 °C, keine Neustarts.**
+
+### 2026-09-23 – Die neue Oberfläche
+
+Neun Seiten, ein Bildschirm: Kopfzeile und Menüleiste stehen immer, dazwischen
+wird der Inhalt gewechselt. Das ist schneller und ruhiger, als für jede Seite
+einen eigenen Bildschirm zu laden, und die Uhr springt beim Wechseln nicht.
+
+Aufbau im Quelltext:
+
+| Datei | Inhalt |
+|---|---|
+| `ui.cpp` | Rahmen: Kopfzeile, Inhaltsbereich, scrollbare Menüleiste, Seitenwechsel |
+| `ui_pages.h` | die gemeinsame Bauform einer Seite (`create`, `activate`, `work`) |
+| `ui_page_home.cpp` | Startseite |
+| `ui_pages_info.cpp` | Wetter, Termine, Nachrichten, Warnungen, Anrufe |
+| `ui_pages_control.cpp` | Radio, Wecker, WLAN |
+| `tablet_data.*` | die Listen vom Pi holen (Termine, News, Warnungen, Anrufe, Wecker) |
+
+**Arbeitsteilung, die sich durchzieht:** `create` und `activate` laufen unter
+der LVGL-Sperre und dürfen nichts Langsames tun; `work` läuft aus der
+Hauptschleife und darf Daten holen. Ein Knopfdruck merkt sich deshalb nur
+einen Wunsch – ausgeführt wird er in `work`. Sonst stünde die Anzeige während
+jeder Anfrage still.
+
+**Monatsübersicht:** Welche Tage Termine haben, rechnet der Pi aus. Wochentag
+des Monatsersten und Schaltjahr rechnet das Gerät (ein paar Zeilen), statt es
+übertragen zu lassen.
+
+**Zwei bewusste Lücken**, beide sichtbar gemacht statt verschwiegen:
+* Auf der Anrufseite steht „Anrufbeantworter: folgt" – der braucht einen neuen
+  Fritz!Box-Zugriff (Etappe 13).
+* Auf der Weckerseite gibt es den Schalter „am Gerät klingeln" bereits, aber
+  ausgegraut: Das Board hat keine Tonausgabe.
+
+**Wettersymbole sind Wörter** („bewölkt", „Regen"): Die Schriften dieses
+Projekts enthalten ASCII und Latin-1, aber keine Wetterzeichen; LVGLs
+eingebaute Symbole kennen weder Sonne noch Wolke. Echte Bildzeichen bräuchten
+eine erweiterte Schrift oder gezeichnete Grafiken.
+
+**Baustolperstein dauerhaft behoben:** Die eingebetteten Zertifikate der
+Espressif-Zusatzkomponenten erzeugt jetzt `scripts/generate_embeds.py` vor dem
+Übersetzen – und zwar beim **Laden** des Skripts, nicht als Vor-Schritt:
+PlatformIO prüft die Quelldateien schon beim Aufbau des Abhängigkeitsbaums.

@@ -39,6 +39,14 @@ JsonDocument makeFilter() {
     filter["alarm"]["next"] = true;
     filter["weather"]["temp"] = true;
     filter["weather"]["text"] = true;
+    filter["weather"]["wmo"] = true;
+    filter["weather"]["temp_min"] = true;
+    filter["weather"]["temp_max"] = true;
+    filter["weather"]["rain_probability"] = true;
+    filter["missed_call_count"] = true;
+    filter["warnings"]["count"] = true;
+    filter["warnings"]["headline"] = true;
+    filter["media"]["kind"] = true;
     filter["call"]["text"] = true;
     filter["calendar"][0]["title"] = true;
     filter["calendar"][0]["when"] = true;
@@ -92,7 +100,15 @@ void parse(const String &body) {
         next.hasWeather = true;
         next.temperature = weather["temp"] | 0.0f;
         next.weatherText = take(weather["text"], 60);
+        next.weatherWmo = weather["wmo"] | -1;
+        next.tempMin = weather["temp_min"] | 0;
+        next.tempMax = weather["temp_max"] | 0;
+        next.rainProbability = weather["rain_probability"] | -1;
     }
+
+    next.missedCallCount = doc["missed_call_count"] | 0;
+    next.warningCount = doc["warnings"]["count"] | 0;
+    next.warningHeadline = take(doc["warnings"]["headline"], 120);
 
     next.callText = take(doc["call"]["text"], 80);
 
@@ -114,6 +130,7 @@ void parse(const String &body) {
 
     JsonObjectConst media = doc["media"];
     next.mediaState = take(media["state"], 20);
+    next.mediaKind = take(media["kind"], 20);
     next.mediaTitle = take(media["title"], 80);
 
     next.volume = doc["system"]["volume"] | -1;
@@ -137,6 +154,12 @@ void parse(const String &body) {
         && next.callText == snapshot.callText
         && next.mediaState == snapshot.mediaState
         && next.mediaTitle == snapshot.mediaTitle
+        && next.mediaKind == snapshot.mediaKind
+        && next.missedCallCount == snapshot.missedCallCount
+        && next.warningCount == snapshot.warningCount
+        && next.warningHeadline == snapshot.warningHeadline
+        && next.tempMin == snapshot.tempMin
+        && next.tempMax == snapshot.tempMax
         && next.volume == snapshot.volume
         && next.configVersion == snapshot.configVersion
         && next.commandId == snapshot.commandId;

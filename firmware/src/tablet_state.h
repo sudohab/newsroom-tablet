@@ -25,10 +25,19 @@ struct Snapshot {
     bool alarmSnoozed = false;
     String nextAlarm;             // "" = kein Wecker gestellt
 
-    // Wetter
+    // Wetter (für die Kopfzeile auf allen Seiten)
     bool hasWeather = false;
     float temperature = 0;
     String weatherText;
+    int weatherWmo = -1;      // Wettercode, daraus wählt das Gerät das Symbol
+    int tempMin = 0;
+    int tempMax = 0;
+    int rainProbability = -1;
+
+    // Die drei Felder rechts auf der Startseite
+    int missedCallCount = 0;
+    int warningCount = 0;
+    String warningHeadline;
 
     // Anruf (nur während es klingelt)
     String callText;
@@ -48,6 +57,7 @@ struct Snapshot {
 
     // Medien
     String mediaState;            // "playing", "stopped", …
+    String mediaKind;             // "radio" oder "podcast"
     String mediaTitle;
 
     // System
