@@ -149,4 +149,21 @@ String stopTimer(const String &id);
 String deleteTimer(const String &id);
 String setTimerRepeat(const String &id, bool repeat);
 
+// --- Matrix-Uhren -----------------------------------------------------------
+struct Clock {
+    String id;
+    String name;
+    bool online = false;
+};
+
+// Uhren und die in der Weboberflaeche gepflegten Texte in einem Zug -- beides
+// gehoert auf dieselbe Seite und aendert sich selten.
+String fetchClocks(std::vector<Clock> &clocks, std::vector<String> &presets);
+
+// Einen der gepflegten Texte schicken. `clockId` leer = an alle Uhren.
+String sendPreset(const String &clockId, int presetIndex);
+
+// Einen frei getippten Text schicken.
+String sendClockText(const String &clockId, const String &text);
+
 }  // namespace tablet_data

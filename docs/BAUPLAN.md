@@ -1022,3 +1022,63 @@ danach Punkte, schneidet also nicht mitten im Namen ab.
 
 *Nach dem Pi-Update geprüft:* keine Fehlermeldung mehr über die serielle
 Schnittstelle, 49 °C, Speicher stabil.
+
+### 2026-09-23 — Etappe 16: Nachrichten an die Matrix-Uhren
+
+Die Aufteilung, die Hannes wollte: **gepflegt** werden die Texte in der
+newsroom21-Weboberfläche, **geschickt** werden sie vom Tisch-Display.
+
+**In der Weboberfläche** (Einstellungen → Matrix-Uhren → „Vorgefertigte
+Nachrichten"): anlegen, im Feld ändern, mit ▲ umsortieren, entfernen.
+Höchstens zwölf Texte à 80 Zeichen. Gespeichert im Zweig `presets` von
+`newsroom_matrix_clocks.json` — neben den Uhreneinstellungen, weil es keine
+Einstellung einer bestimmten Uhr ist, sondern eine gemeinsame Liste. Ein Test
+hält fest, dass das Speichern der Texte die Uhreneinstellungen nicht anfasst.
+
+Beim Speichern wird **geputzt statt abgelehnt**: Umbrüche weg (auf einer
+Laufschrift erschienen sie als Kästchen), Leerzeichen zusammengefasst,
+Doppeltes und Leeres entfernt. Der Server könnte auch die ganze Änderung
+zurückweisen — dann müsste man bei zwölf Texten raten, welcher schuld war.
+Zurück kommt deshalb, was **wirklich** gespeichert wurde, und die Oberfläche
+zeigt dieses Ergebnis und sagt, wenn etwas weggefallen ist.
+
+Eine leere gespeicherte Liste ist etwas anderes als „noch nie gepflegt": Wer
+alle Texte löscht, bekommt nicht beim nächsten Aufruf die Voreinstellung
+zurück.
+
+**Auf dem Gerät** (Seite „Uhren", links neben „Warnungen"): links die Texte
+zum Antippen, rechts die Auswahl der Uhr und ein Feld für eine freie
+Nachricht.
+
+* Die Texte werden **bei jedem Öffnen** neu geholt, nicht nur beim ersten —
+  sie können in der Weboberfläche geändert worden sein.
+* Die Uhrenauswahl ist ein **Knopf zum Weiterschalten**, keine Liste: Bei zwei
+  Uhren ist das schneller, und die Beschriftung sagt immer, wohin es geht.
+  Nach der letzten Uhr kommt „alle Uhren".
+* Für den freien Text blendet LVGL eine **Bildschirmtastatur** ein. Sie hängt
+  am Bildschirm, nicht an der Seite — sie ist höher als der Inhaltsbereich und
+  wäre sonst abgeschnitten. Deshalb muss sie beim Seitenwechsel selbst
+  verschwinden: `ui_pages::Page` hat dafür ein neues, optionales Feld
+  `deactivate`, das `ui::showPage()` für die verlassene Seite aufruft. Alle
+  anderen Seiten lassen es weg (`nullptr`).
+* Die Tastatur behält bewusst LVGLs eigene Schrift: Ihre Tasten für „fertig"
+  und „löschen" sind Symbole aus der Montserrat-Schrift, die unsere eigenen
+  Schriften (ASCII + Latin-1) nicht enthalten.
+
+✅ **Was das Gerät NICHT kann: die Texte ändern.** Es gibt dafür keine Aktion —
+ein Test hält das fest. Von den Uhren gehen nur `id`, `name` und `online` ans
+Gerät; Token-Ablauf, Firmwarestand, Signalstärke und Einstellungen bleiben der
+angemeldeten Weboberfläche vorbehalten.
+
+✅ Der Text kommt als **Nummer aus der Liste ODER frei getippt** — nie beides
+und nie keins (eigener Prüfer im Schema, sonst müsste der Server raten, was
+gilt). Freier Text ist hier vertretbar: Er wird nur angezeigt, nirgends
+ausgewertet, und die Weboberfläche kann dasselbe längst über `test-text`.
+Geprüft wird er trotzdem und durch `clean_preset()` geführt. Im Gerät werden
+Anführungszeichen und Rückstriche maskiert und Steuerzeichen entfernt, bevor
+der Text in den JSON-Körper geht.
+
+⚠ Die Wiederhol-Sperre gilt für den **ganzen Vorgang**, nicht je Uhr. Sonst
+könnte ein Gerät mit „alle" die Sperre der einzelnen Uhren umgehen.
+
+*Serverseite: newsroom21 `997d8c7` (Weboberfläche) und `2da581d` (Tablet).*

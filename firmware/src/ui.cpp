@@ -138,6 +138,12 @@ void showPage(int index) {
                                       lv_color_hex(i == index ? kAccent : kSurface), 0);
         }
     }
+    // Die alte Seite aufräumen lassen, bevor die neue kommt.
+    if (activePage >= 0 && activePage != index) {
+        const ui_pages::Page *old = &ui_pages::all()[activePage];
+        if (old->deactivate != nullptr) old->deactivate();
+    }
+
     const bool first = (activePage < 0);
     activePage = index;
     pendingActivate = index;

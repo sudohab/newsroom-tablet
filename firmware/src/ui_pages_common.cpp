@@ -19,7 +19,7 @@ using namespace ui_theme;
 // Startseite selbst.
 const Page kPages[] = {
     {"Timer",    timers::create,   timers::activate,   timers::work},
-    // Hier kommt später „Uhren" hin (Nachrichten an die Matrix-Uhren).
+    {"Uhren",    clocks::create,   clocks::activate,   clocks::work, clocks::deactivate},
     {"Warnungen", warnings::create, warnings::activate, warnings::work},
     {"News",     news::create,     news::activate,     news::work},
     {"Start",    home::create,     home::activate,     home::work},

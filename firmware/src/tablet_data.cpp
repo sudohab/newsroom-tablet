@@ -442,4 +442,91 @@ String setTimerRepeat(const String &id, bool repeat) {
                        String("\"repeat\":") + (repeat ? "true" : "false"));
 }
 
+// --- Matrix-Uhren -----------------------------------------------------------
+
+namespace {
+
+// Uhrenkennungen sind Kleinbuchstaben, Ziffern und Bindestrich -- dieselbe
+// Zeichenmenge wie im Server. `looksLikeId` passt hier nicht: Das erwartet
+// Hexziffern.
+bool looksLikeClockId(const String &id) {
+    if (id.isEmpty() || id.length() > 32) return false;
+    for (size_t i = 0; i < id.length(); ++i) {
+        const char c = id[i];
+        if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-')) return false;
+    }
+    return true;
+}
+
+// Ein Text geht als JSON-Zeichenkette auf die Reise. Anfuehrungszeichen und
+// Rueckstriche muessen also maskiert werden, Steuerzeichen fallen weg -- eine
+// Laufschrift kann damit ohnehin nichts anfangen.
+String jsonString(const String &value) {
+    String out = "\"";
+    for (size_t i = 0; i < value.length(); ++i) {
+        const char c = value[i];
+        if (c == '"' || c == '\\') { out += '\\'; out += c; }
+        else if (static_cast<unsigned char>(c) >= 0x20) out += c;
+    }
+    out += "\"";
+    return out;
+}
+
+String sendClockCommand(const String &clockId, const String &payload) {
+    const String target = clockId.isEmpty() ? String("all") : clockId;
+    if (target != "all" && !looksLikeClockId(target)) return "Unbekannte Uhr";
+    const String json = "{\"action\":\"clock_message\",\"clock_id\":" + quoted(target)
+                      + "," + payload + "}";
+    const api_client::Result result = api_client::postJson("/api/tablet/action", json);
+    return result.ok ? String()
+                     : (result.error.isEmpty() ? String("Senden fehlgeschlagen") : result.error);
+}
+
+}  // namespace
+
+String fetchClocks(std::vector<Clock> &clocks, std::vector<String> &presets) {
+    clocks.clear();
+    presets.clear();
+    JsonDocument filter;
+    filter["clocks"][0]["id"] = true;
+    filter["clocks"][0]["name"] = true;
+    filter["clocks"][0]["online"] = true;
+    filter["presets"] = true;
+
+    const api_client::Result result = api_client::get("/api/tablet/clocks");
+    if (!result.ok) {
+        return result.error.isEmpty() ? String("Uhren nicht abrufbar") : result.error;
+    }
+    JsonDocument doc;
+    if (deserializeJson(doc, result.body, DeserializationOption::Filter(filter))) {
+        return "Antwort nicht lesbar";
+    }
+    for (JsonObjectConst entry : doc["clocks"].as<JsonArrayConst>()) {
+        Clock clock;
+        clock.id = take(entry["id"], 32);
+        clock.name = take(entry["name"], 40);
+        clock.online = entry["online"] | false;
+        if (!clock.id.isEmpty()) clocks.push_back(clock);
+        if (clocks.size() >= 8) break;
+    }
+    for (JsonVariantConst entry : doc["presets"].as<JsonArrayConst>()) {
+        const String text = take(entry, 80);
+        if (!text.isEmpty()) presets.push_back(text);
+        if (presets.size() >= 12) break;
+    }
+    return String();
+}
+
+String sendPreset(const String &clockId, int presetIndex) {
+    if (presetIndex < 0 || presetIndex > 11) return "Text nicht vorhanden";
+    return sendClockCommand(clockId, "\"preset_index\":" + String(presetIndex));
+}
+
+String sendClockText(const String &clockId, const String &text) {
+    const String trimmed = [&text]() { String t = text; t.trim(); return t; }();
+    if (trimmed.isEmpty()) return "Leerer Text";
+    if (trimmed.length() > 80) return "Text zu lang";
+    return sendClockCommand(clockId, "\"text\":" + jsonString(trimmed));
+}
+
 }  // namespace tablet_data

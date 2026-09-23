@@ -32,6 +32,11 @@ struct Page {
     lv_obj_t *(*create)(lv_obj_t *parent);  // baut den Inhalt auf
     void (*activate)();                     // beim Öffnen der Seite
     void (*work)();                         // Daten holen, aus der Hauptschleife
+    // Beim Verlassen der Seite. Fast alle Seiten brauchen das nicht und
+    // lassen es weg (dann nullptr). Nötig wurde es für die Bildschirm-
+    // tastatur: Sie hängt am Bildschirm statt an der Seite -- sonst wäre sie
+    // abgeschnitten -- und muss deshalb beim Wechseln selbst verschwinden.
+    void (*deactivate)() = nullptr;
 };
 
 // Alle Seiten in der Reihenfolge, in der sie in der Menüleiste stehen.
@@ -96,6 +101,13 @@ lv_obj_t *create(lv_obj_t *parent);
 void activate();
 void work();
 }  // namespace alarms
+
+namespace clocks {
+lv_obj_t *create(lv_obj_t *parent);
+void activate();
+void work();
+void deactivate();
+}  // namespace clocks
 
 namespace timers {
 lv_obj_t *create(lv_obj_t *parent);
