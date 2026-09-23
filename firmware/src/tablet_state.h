@@ -114,6 +114,10 @@ String fetchStations(std::vector<Station> &stations);
 
 String playStation(const String &id);
 String stopRadio();
+
+// Halt fuer alles, was gerade laeuft -- Radio wie Podcast. Die Podcast-Seite
+// braucht das, denn `radio_stop` beendet nur den Sender.
+String stopMedia();
 String sleepTimer(int minutes);
 String cancelSleepTimer();
 

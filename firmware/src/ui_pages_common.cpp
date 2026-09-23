@@ -17,6 +17,7 @@ const Page kPages[] = {
     {"Warnungen", warnings::create, warnings::activate, warnings::work},
     {"Anrufe",   calls::create,    calls::activate,    calls::work},
     {"Radio",    radio::create,    radio::activate,    radio::work},
+    {"Podcast",  podcasts::create, podcasts::activate, podcasts::work},
     {"Wecker",   alarms::create,   alarms::activate,   alarms::work},
     {"WLAN",     wifi::create,     wifi::activate,     wifi::work},
     {"Geraet",   settings::create, settings::activate, settings::work},

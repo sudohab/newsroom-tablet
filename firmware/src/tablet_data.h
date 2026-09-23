@@ -82,6 +82,34 @@ struct Call {
 
 String fetchCalls(std::vector<Call> &calls);
 
+// --- Podcasts ---------------------------------------------------------------
+struct Podcast {
+    String id;
+    String title;
+    String author;
+    int episodeCount = 0;
+};
+
+String fetchPodcasts(std::vector<Podcast> &podcasts, bool &quietTime);
+
+struct Episode {
+    String id;
+    String title;
+    long publishedTs = 0;   // Sekunden seit 1970, 0 = unbekannt
+    int duration = 0;       // Sekunden, 0 = unbekannt
+    bool played = false;
+    int position = 0;       // angehoerte Sekunden
+    bool video = false;
+};
+
+String fetchEpisodes(const String &podcastId, std::vector<Episode> &episodes);
+
+// Folge abspielen. `fromStart` uebergeht einen gemerkten Stand.
+String playEpisode(const String &podcastId, const String &episodeId, bool fromStart);
+
+// Folge als gehoert oder ungehoert markieren.
+String markEpisodePlayed(const String &episodeId, bool played);
+
 // --- Wecker -----------------------------------------------------------------
 struct Alarm {
     String id;

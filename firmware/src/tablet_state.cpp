@@ -283,6 +283,8 @@ String playStation(const String &id) {
 
 String stopRadio() { return sendAction("{\"action\":\"radio_stop\"}"); }
 
+String stopMedia() { return sendAction("{\"action\":\"media_stop\"}"); }
+
 String sleepTimer(int minutes) {
     if (minutes < 1 || minutes > 240) return "Zeit ausserhalb des Bereichs";
     return sendAction("{\"action\":\"radio_sleep\",\"minutes\":" + String(minutes) + "}");

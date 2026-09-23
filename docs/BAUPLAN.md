@@ -807,3 +807,46 @@ Neustarts, 51 KB interner Speicher frei, 54 Grad.
 in `components/esp_psram/esp32s3/Kconfig.spiram` zeigt: Auf dem ESP32-S3 ist
 diese Option nur eine Sammelschaltung, die genau `SPIRAM_FETCH_INSTRUCTIONS`
 und `SPIRAM_RODATA` einschaltet — beides haben wir laengst. Kein Unterschied.
+
+### 2026-09-23 — Etappe: Podcast-Seite
+
+Die Seite steht jetzt zwischen „Radio" und „Wecker" in der Menueleiste.
+
+**Aufbau.** Zwei Spalten: links die Abos, rechts die Folgen des ausgewaehlten
+Abos. Eine Folgenzeile zeigt Titel und darunter Datum, Dauer und den Stand
+(„gehoert" oder „bei 12 Min"). Antippen spielt ab — und zwar dort weiter, wo
+zuletzt aufgehoert wurde, denn den Stand fuehrt der Pi. Der Schalter „Von
+vorn" uebergeht ihn. Rechts an jeder Zeile ein Umschalter „gehoert"/„offen";
+gehoerte Folgen stehen blasser da. Unten „Aus".
+
+**Warum `media_stop` und nicht `radio_stop`.** Die Radioseite hat schon einen
+Aus-Knopf, der aber nur den Sender beendet. Fuer den Podcast ist
+`tablet_state::stopMedia()` dazugekommen.
+
+**Was die Seite bewusst nicht kann:** abonnieren, Feeds aendern, Folgen
+herunterladen oder loeschen. Ein Geraet, das offen auf dem Tisch liegt, soll
+nichts dauerhaft veraendern — dieselbe Linie wie beim Wecker (nur Zeit, Tage,
+Ein/Aus) und beim Radio (nur Favoriten).
+
+**Gegenstelle gekuerzt** (im Repo newsroom21, Commit `35d39f7`). Die beiden
+Endpunkte reichten die Antwort des Moduls unveraendert durch. Jetzt filtern
+`_podcast_summary()` und `_episode_summary()`:
+
+| weggelassen | warum |
+|---|---|
+| `feed_url` | Das Geraet braucht sie nicht (abgespielt wird im Pi). Sie ist die Angabe, die ein gestohlenes Token sonst mit ausliefern wuerde. |
+| `last_error`, `last_refresh`, `auto_download` | Innereien des Servers bzw. Einstellungen der Weboberflaeche |
+| `storage_used_mb`, `downloading`, `downloaded` | Speicherstand und Downloads des Pi gehen das Display nichts an |
+| `summary` | bis 300 Zeichen je Folge; bei 40 Folgen mehr, als das Geraet am Stueck einliest — und angezeigt wird es auf der schmalen Liste ohnehin nicht |
+
+✅ Kennungen (`podcast_id`, `episode_id`) kommen zwar vom Pi, gehen aber als
+Teil des Pfades bzw. des JSON-Koerpers zurueck. Sie werden vor jedem Versand
+durch `looksLikeId()` geprueft (nur Hexziffern und Bindestriche) — so kann aus
+einer unerwarteten Antwort kein veraenderter Pfad werden. Der Server prueft
+zusaetzlich mit `schemas.valid_podcast_id` / `valid_episode_id`.
+
+⚠ Die Ruhezeit des Podcast-Moduls (`quiet_time`) wird angezeigt, aber nicht
+erzwungen — das macht der Pi, der ein Abspielen waehrend der Ruhezeit mit 409
+ablehnt. Das Geraet zeigt die Meldung dann nur an.
+
+*Noch nicht am Geraet erprobt.*

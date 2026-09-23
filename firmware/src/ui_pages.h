@@ -81,6 +81,12 @@ void activate();
 void work();
 }  // namespace radio
 
+namespace podcasts {
+lv_obj_t *create(lv_obj_t *parent);
+void activate();
+void work();
+}  // namespace podcasts
+
 namespace alarms {
 lv_obj_t *create(lv_obj_t *parent);
 void activate();

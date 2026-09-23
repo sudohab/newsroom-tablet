@@ -180,6 +180,105 @@ String fetchCalls(std::vector<Call> &calls) {
     }, &calls);
 }
 
+// --- Podcasts ---------------------------------------------------------------
+
+String fetchPodcasts(std::vector<Podcast> &podcasts, bool &quietTime) {
+    podcasts.clear();
+    quietTime = false;
+    const api_client::Result result = api_client::get("/api/tablet/podcasts");
+    if (!result.ok) {
+        return result.error.isEmpty() ? String("Podcasts nicht abrufbar") : result.error;
+    }
+
+    JsonDocument filter;
+    filter["quiet_time"] = true;
+    filter["subscriptions"][0]["id"] = true;
+    filter["subscriptions"][0]["title"] = true;
+    filter["subscriptions"][0]["author"] = true;
+    filter["subscriptions"][0]["episode_count"] = true;
+
+    JsonDocument doc;
+    if (deserializeJson(doc, result.body, DeserializationOption::Filter(filter))) {
+        return "Antwort nicht lesbar";
+    }
+    quietTime = doc["quiet_time"] | false;
+    for (JsonObjectConst entry : doc["subscriptions"].as<JsonArrayConst>()) {
+        Podcast podcast;
+        podcast.id = take(entry["id"], 64);
+        podcast.title = take(entry["title"], 60);
+        podcast.author = take(entry["author"], 60);
+        podcast.episodeCount = entry["episode_count"] | 0;
+        if (!podcast.id.isEmpty()) podcasts.push_back(podcast);
+        // Mehr Abos zeigt die Liste nicht; der Pi laesst ohnehin nur wenige zu.
+        if (podcasts.size() >= 20) break;
+    }
+    return String();
+}
+
+String fetchEpisodes(const String &podcastId, std::vector<Episode> &episodes) {
+    episodes.clear();
+    // Die Kennung kam gerade vom Pi, geht aber gleich als Teil des Pfades
+    // zurueck. Deshalb hier pruefen: So kann aus einer unerwarteten Antwort
+    // kein veraenderter Pfad werden.
+    if (!looksLikeId(podcastId)) return "Unbekannter Podcast";
+
+    const String path = "/api/tablet/podcasts/" + podcastId + "/episodes";
+    const api_client::Result result = api_client::get(path.c_str());
+    if (!result.ok) {
+        return result.error.isEmpty() ? String("Folgen nicht abrufbar") : result.error;
+    }
+
+    JsonDocument filter;
+    JsonObject wanted = filter["episodes"].add<JsonObject>();
+    wanted["id"] = true;
+    wanted["title"] = true;
+    wanted["published_ts"] = true;
+    wanted["duration"] = true;
+    wanted["played"] = true;
+    wanted["position"] = true;
+    wanted["video"] = true;
+
+    JsonDocument doc;
+    if (deserializeJson(doc, result.body, DeserializationOption::Filter(filter))) {
+        return "Antwort nicht lesbar";
+    }
+    for (JsonObjectConst entry : doc["episodes"].as<JsonArrayConst>()) {
+        Episode episode;
+        episode.id = take(entry["id"], 64);
+        episode.title = take(entry["title"], 90);
+        episode.publishedTs = entry["published_ts"] | 0L;
+        episode.duration = entry["duration"] | 0;
+        episode.played = entry["played"] | false;
+        episode.position = entry["position"] | 0;
+        episode.video = entry["video"] | false;
+        if (!episode.id.isEmpty()) episodes.push_back(episode);
+        // Die Liste ist zum Antippen da, nicht zum Durchblaettern eines
+        // Archivs. 40 Folgen sind rund zwei Bildschirmhoehen Scrollweg.
+        if (episodes.size() >= 40) break;
+    }
+    return String();
+}
+
+String playEpisode(const String &podcastId, const String &episodeId, bool fromStart) {
+    if (!looksLikeId(podcastId)) return "Unbekannter Podcast";
+    if (!looksLikeId(episodeId)) return "Unbekannte Folge";
+    const String json = "{\"action\":\"podcast_play\",\"podcast_id\":" + quoted(podcastId)
+                      + ",\"episode_id\":" + quoted(episodeId)
+                      + ",\"from_start\":" + (fromStart ? "true" : "false") + "}";
+    const api_client::Result result = api_client::postJson("/api/tablet/action", json);
+    return result.ok ? String()
+                     : (result.error.isEmpty() ? String("Abspielen fehlgeschlagen") : result.error);
+}
+
+String markEpisodePlayed(const String &episodeId, bool played) {
+    if (!looksLikeId(episodeId)) return "Unbekannte Folge";
+    const String json = "{\"action\":\"podcast_played\",\"episode_id\":" + quoted(episodeId)
+                      + ",\"played\":" + (played ? "true" : "false") + "}";
+    const api_client::Result result = api_client::postJson("/api/tablet/action", json);
+    return result.ok ? String()
+                     : (result.error.isEmpty() ? String("Markieren fehlgeschlagen") : result.error);
+}
+
 // --- Wecker -----------------------------------------------------------------
 
 String fetchAlarms(std::vector<Alarm> &alarms) {
