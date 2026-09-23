@@ -44,7 +44,22 @@ bool hasApiToken();
 void clearApiToken();
 
 // --- Anzeige ----------------------------------------------------------------
-uint8_t brightness();               // 10..100 Prozent
+// „Helligkeit" heißt hier: wie stark das Bild abgedunkelt wird. Die
+// Hintergrundbeleuchtung selbst kann dieses Board nur an oder aus (siehe
+// display_control.h).
+uint8_t brightness();               // Tag, 10..100 Prozent
 bool setBrightness(uint8_t percent);
+
+uint8_t nightBrightness();          // Nacht, 10..100 Prozent
+bool setNightBrightness(uint8_t percent);
+
+// Nachtmodus von … bis (volle Stunden, 0..23). Beide gleich = aus.
+uint8_t nightStartHour();
+uint8_t nightEndHour();
+bool setNightHours(uint8_t startHour, uint8_t endHour);
+
+// Nach so vielen Minuten ohne Berührung geht der Bildschirm aus (0 = nie).
+uint16_t screenOffMinutes();
+bool setScreenOffMinutes(uint16_t minutes);
 
 }  // namespace settings_store

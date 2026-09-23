@@ -93,6 +93,12 @@ void activate();
 void work();
 }  // namespace wifi
 
+namespace settings {
+lv_obj_t *create(lv_obj_t *parent);
+void activate();
+void work();
+}  // namespace settings
+
 // --- Gemeinsame Bausteine der Seiten ---------------------------------------
 
 // Überschrift einer Seite (oben links im Inhaltsbereich).

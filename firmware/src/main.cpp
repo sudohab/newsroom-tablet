@@ -23,6 +23,7 @@
 #include <time.h>
 
 #include "api_client.h"
+#include "display_control.h"
 #include "lvgl_port/lvgl_v8_port.h"
 #include "root_ca.h"
 #include "serial_console.h"
@@ -139,6 +140,8 @@ void setup() {
 
     tablet_state::begin();
     ui::begin();
+    // Nach dem Aufbau der Oberflaeche: Abdunkelung liegt ueber allem.
+    display_control::begin(board->getBacklight());
 
     // --- Netzwerk -----------------------------------------------------------
     wifi_manager::begin();
@@ -162,6 +165,7 @@ void loop() {
 
     // Einrichtung per USB (Token, Pi-Adresse) – siehe serial_console.h
     serial_console::loop();
+    display_control::loop();
     wifi_manager::loop();
     configureTimeOnce();
     tablet_state::loop();

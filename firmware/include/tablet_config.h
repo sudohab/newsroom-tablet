@@ -27,6 +27,12 @@ constexpr char kNtpSecondary[] = "de.pool.ntp.org";
 
 // Helligkeit in Prozent
 constexpr uint8_t kDefaultBrightness = 80;
+constexpr uint8_t kDefaultNightBrightness = 25;   // nachts deutlich dunkler
+constexpr uint8_t kDefaultNightStart = 22;        // Nachtmodus von 22 Uhr …
+constexpr uint8_t kDefaultNightEnd = 7;           // … bis 7 Uhr
+// Bildschirm nach dieser Zeit ohne Berührung abschalten. 0 = nie.
+// Voreinstellung 0: Ein Wecker, der von selbst dunkel wird, überrascht sonst.
+constexpr uint16_t kDefaultScreenOffMinutes = 0;
 constexpr uint8_t kMinBrightness = 10;  // nie ganz dunkel: sonst wirkt das
                                         // Gerät defekt und ist nicht bedienbar
 

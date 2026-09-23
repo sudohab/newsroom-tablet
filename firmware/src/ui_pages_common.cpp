@@ -19,6 +19,7 @@ const Page kPages[] = {
     {"Radio",    radio::create,    radio::activate,    radio::work},
     {"Wecker",   alarms::create,   alarms::activate,   alarms::work},
     {"WLAN",     wifi::create,     wifi::activate,     wifi::work},
+    {"Geraet",   settings::create, settings::activate, settings::work},
 };
 
 const Page *all() { return kPages; }

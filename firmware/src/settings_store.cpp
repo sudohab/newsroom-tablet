@@ -17,6 +17,10 @@ constexpr char kKeyPass[] = "wifi_pass";
 constexpr char kKeyHost[] = "api_host";
 constexpr char kKeyToken[] = "api_token";
 constexpr char kKeyBright[] = "brightness";
+constexpr char kKeyNightBright[] = "night_bright";
+constexpr char kKeyNightStart[] = "night_start";
+constexpr char kKeyNightEnd[] = "night_end";
+constexpr char kKeyScreenOff[] = "screen_off";
 
 // Liest einen Text und begrenzt ihn auf die erlaubte Länge. Ein manipulierter
 // oder beschädigter NVS soll nirgends zu überlangen Werten führen.
@@ -135,6 +139,52 @@ bool setBrightness(uint8_t percent) {
     if (!ready) return false;
     if (percent < cfg::kMinBrightness || percent > 100) return false;
     prefs.putUChar(kKeyBright, percent);
+    return true;
+}
+
+uint8_t nightBrightness() {
+    if (!ready || !prefs.isKey(kKeyNightBright)) return cfg::kDefaultNightBrightness;
+    const uint8_t value = prefs.getUChar(kKeyNightBright, cfg::kDefaultNightBrightness);
+    if (value < cfg::kMinBrightness || value > 100) return cfg::kDefaultNightBrightness;
+    return value;
+}
+
+bool setNightBrightness(uint8_t percent) {
+    if (!ready) return false;
+    if (percent < cfg::kMinBrightness || percent > 100) return false;
+    prefs.putUChar(kKeyNightBright, percent);
+    return true;
+}
+
+uint8_t nightStartHour() {
+    if (!ready || !prefs.isKey(kKeyNightStart)) return cfg::kDefaultNightStart;
+    const uint8_t value = prefs.getUChar(kKeyNightStart, cfg::kDefaultNightStart);
+    return value <= 23 ? value : cfg::kDefaultNightStart;
+}
+
+uint8_t nightEndHour() {
+    if (!ready || !prefs.isKey(kKeyNightEnd)) return cfg::kDefaultNightEnd;
+    const uint8_t value = prefs.getUChar(kKeyNightEnd, cfg::kDefaultNightEnd);
+    return value <= 23 ? value : cfg::kDefaultNightEnd;
+}
+
+bool setNightHours(uint8_t startHour, uint8_t endHour) {
+    if (!ready || startHour > 23 || endHour > 23) return false;
+    prefs.putUChar(kKeyNightStart, startHour);
+    prefs.putUChar(kKeyNightEnd, endHour);
+    return true;
+}
+
+uint16_t screenOffMinutes() {
+    if (!ready || !prefs.isKey(kKeyScreenOff)) return cfg::kDefaultScreenOffMinutes;
+    const uint16_t value = prefs.getUShort(kKeyScreenOff, cfg::kDefaultScreenOffMinutes);
+    // Mehr als ein Tag ergibt keinen Sinn; 0 heißt "nie abschalten".
+    return value <= 1440 ? value : cfg::kDefaultScreenOffMinutes;
+}
+
+bool setScreenOffMinutes(uint16_t minutes) {
+    if (!ready || minutes > 1440) return false;
+    prefs.putUShort(kKeyScreenOff, minutes);
     return true;
 }
 

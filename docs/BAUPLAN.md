@@ -154,7 +154,7 @@ Offene Fragen, die vor dem Bauen zu klären sind:
 * **Was passiert beim Ablauf?** Ton über den Pi, Anzeige auf dem Tablet, oder
   beides? Bis der Ton am Gerät da ist (MCP4725), bliebe nur der Pi.
 
-### Etappe 15 – Geräte-Einstellungen (vorgemerkt, 23.09.2026)
+### Etappe 15 – Geräte-Einstellungen (**fertig, auf dem Gerät**, 23.09.2026)
 
 Eine Seite für das Gerät selbst:
 
@@ -694,3 +694,26 @@ Aufteilung des knappen internen RAM (rund 320 KB), am Gerät erprobt:
 Kleinere Zeichenpuffer heißen nur, dass LVGL in mehr Streifen zeichnet – das
 kostet etwas Zeit, aber nichts an Ruhe. Der Puffer des Panels ist der
 wichtigere von beiden.
+
+### 2026-09-23 – Einstellungsseite gebaut
+
+Neue Seite „Geraet" (`src/ui_page_settings.cpp`) und die Steuerung dahinter
+(`src/display_control.*`):
+
+* **Helligkeit für Tag und Nacht** je ein Schieberegler (10–100 %).
+* **Nachtmodus** mit Schalter und zwei Stundenwalzen (von/bis). Über
+  Mitternacht hinweg richtig gerechnet (22 → 7 Uhr gilt als „nach 22 **oder**
+  vor 7"). Ausgeschaltet wird gespeichert, indem Beginn und Ende gleich sind –
+  so braucht es keinen zusätzlichen Wert im Speicher.
+* **Bildschirm aus nach** nie/1/2/5/10/30/60 Minuten, plus Knopf „Jetzt aus".
+* **Berührung weckt auf**, und zwar ohne die Berührung als Bedienung zu
+  werten – sonst startete man beim Aufwecken versehentlich einen Sender.
+
+Alles wirkt sofort und wird im Gerät gespeichert; es gibt bewusst keinen
+„Speichern"-Knopf.
+
+**Umsetzung des Dimmens:** Eine schwarze Fläche auf LVGLs oberster Ebene, deren
+Deckkraft sich mit der eingestellten Helligkeit ändert. Sie liegt über allen
+Seiten – auch über künftigen – und nimmt keine Berührungen an. Die
+Hintergrundbeleuchtung selbst bleibt an; nur „ganz aus" schaltet sie wirklich
+ab, denn mehr kann der Schalter am CH422G nicht.
