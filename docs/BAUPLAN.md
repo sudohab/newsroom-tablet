@@ -737,3 +737,31 @@ ins Zimmer leuchtet). Eine Berührung weckt ihn – ohne als Bedienung zu zähle
 
 Auf der Seite steht jetzt auch, warum es keinen Helligkeitsregler gibt. Eine
 ehrliche Zeile ist besser als ein Regler, der nichts tut.
+
+### 2026-09-23 – Eigene Boarddefinition wegen der Austastlücken
+
+Das Bild rutschte weiterhin nach oben. Nächster Hebel aus Espressifs Liste:
+**größere Austastlücken**. Zwischen zwei sichtbaren Zeilen macht das Panel
+eine Pause; in dieser Pause kann der Speicher den Vorratspuffer nachfüllen.
+Die Boarddefinition der Bibliothek ist mit 8 Pixeln sehr knapp.
+
+Die Werte ließen sich nicht zur Laufzeit ändern (`getRefreshPanelFullConfig()`
+ist nicht zugänglich), deshalb jetzt eine **eigene Boarddefinition**
+(`firmware/include/esp_panel_board_custom_conf.h`). Sie wurde **automatisch**
+aus der Boarddefinition der Bibliothek erzeugt – alle 81 Werte (Pins,
+Controller, Touch, Expander) unverändert übernommen, von Hand geändert nur:
+
+| Wert | vorher | jetzt |
+|---|---|---|
+| HBP (waagerecht hinten) | 8 | 40 |
+| HFP (waagerecht vorne) | 8 | 20 |
+| VBP (senkrecht hinten) | 8 | 20 |
+| VFP (senkrecht vorne) | 8 | 10 |
+| Bounce-Puffer | 10 Zeilen | 20 Zeilen |
+
+Kosten: 36 statt 39 Bilder je Sekunde. Automatisch erzeugt heißt auch: kein
+Vertippen bei zwanzig Datenleitungen.
+
+Gleichzeitig das Layout der Einstellungsseite entzerrt – zwei lange
+Überschriften nebeneinander hatten sich überschrieben. Jetzt eine gemeinsame
+Überschrift „BILDSCHIRM AUS NACH" und darunter die kurzen „AM TAG" / „NACHTS".

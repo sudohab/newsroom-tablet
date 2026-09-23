@@ -18,7 +18,10 @@
  *
  * Set to `1` to enable supported board configuration, `0` to disable
  */
-#define ESP_PANEL_BOARD_DEFAULT_USE_SUPPORTED       (1)  // newsroom-tablet: fertige Boarddefinition verwenden
+// newsroom-tablet: Wir benutzen eine EIGENE Boarddefinition
+// (esp_panel_board_custom_conf.h), weil die fertige die Austastluecken
+// des Panels festlegt und sie sich nicht aendern lassen.
+#define ESP_PANEL_BOARD_DEFAULT_USE_SUPPORTED       (0)
 
 #if ESP_PANEL_BOARD_DEFAULT_USE_SUPPORTED
 /**

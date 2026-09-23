@@ -117,6 +117,10 @@ void setup() {
         // rund 320 KB knapp, und fuer ein ruhiges Bild ist er beim Panel
         // besser angelegt als beim Zeichnen.
         static_cast<BusRGB *>(lcdBus)->configRGB_BounceBufferSize(lcd->getFrameWidth() * 20);
+
+        // Austastluecken und Bounce-Puffer stehen in unserer eigenen
+        // Boarddefinition (include/esp_panel_board_custom_conf.h) - die
+        // Bibliothek laesst sie zur Laufzeit nicht aendern.
     }
 
     if (!board->begin()) {

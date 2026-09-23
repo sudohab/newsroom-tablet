@@ -122,15 +122,20 @@ lv_obj_t *create(lv_obj_t *parent) {
     status = makeStatus(page);
 
     // --- links: wann geht der Bildschirm aus? -----------------------------
-    rollerDayOff = makeOffRoller(page, 0, 46, "BILDSCHIRM AUS AM TAG", onDayOffChanged);
-    rollerNightOff = makeOffRoller(page, 190, 46, "IN DER NACHT", onNightOffChanged);
+    // Eine gemeinsame Ueberschrift, darunter zwei kurze. Lange Ueberschriften
+    // nebeneinander ueberschrieben sich - eine Beschriftung ist in LVGL so
+    // breit wie ihr Text.
+    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 0, 46,
+              "BILDSCHIRM AUS NACH");
+    rollerDayOff = makeOffRoller(page, 0, 76, "AM TAG", onDayOffChanged);
+    rollerNightOff = makeOffRoller(page, 190, 76, "NACHTS", onNightOffChanged);
 
-    makeButton(page, "Jetzt aus", onOffNow, 150, 46, LV_ALIGN_TOP_LEFT, 0, 190, kAccent);
+    makeButton(page, "Jetzt aus", onOffNow, 150, 46, LV_ALIGN_TOP_LEFT, 0, 214, kAccent);
 
     // Feste Breite: Ohne sie waere die Zeile so breit wie ihr Text und liefe
     // ueber die Trennlinie in die rechte Spalte.
-    makeWrappedLabel(page, &ui_font_18, kTextMuted, 0, 244, 360,
-                     "Eine Berührung weckt den Bildschirm wieder auf.");
+    makeWrappedLabel(page, &ui_font_18, kTextMuted, 170, 222, 200,
+                     "Eine Berührung weckt ihn wieder auf.");
 
     // --- rechts: Nachtmodus ------------------------------------------------
     makeSeparator(page, 400, 46, 1, kHeight - 50);
@@ -147,11 +152,10 @@ lv_obj_t *create(lv_obj_t *parent) {
     rollerStart = makeHourRoller(page, 430, 90, "VON");
     rollerEnd = makeHourRoller(page, 590, 90, "BIS");
 
-    makeWrappedLabel(page, &ui_font_18, kTextMuted, 430, 196, 300,
-                     "In dieser Zeit gilt die Nacht-Abschaltzeit.");
-    makeWrappedLabel(page, &ui_font_18, kTextMuted, 430, 226, 300,
-                     "Eine Helligkeitsregelung hat dieses Gerät nicht: "
-                     "Die Beleuchtung kennt nur an und aus.");
+    makeWrappedLabel(page, &ui_font_18, kTextMuted, 430, 214, 300,
+                     "In dieser Zeit gilt die Nacht-Abschaltzeit. Eine "
+                     "Helligkeitsregelung hat dieses Gerät nicht – die "
+                     "Beleuchtung kennt nur an und aus.");
     return page;
 }
 
