@@ -356,4 +356,90 @@ String toggleAlarm(const String &id, bool enabled) {
                      : (result.error.isEmpty() ? String("Umschalten fehlgeschlagen") : result.error);
 }
 
+// --- Kurzzeitwecker ---------------------------------------------------------
+
+namespace {
+
+// Die Kennungen des Timer-Moduls sind reine Hexzeichen ohne Bindestrich.
+// `looksLikeId` liesse auch Bindestriche zu -- hier genuegt die engere Form.
+bool looksLikeTimerId(const String &id) {
+    if (id.length() < 8 || id.length() > 32) return false;
+    for (size_t i = 0; i < id.length(); ++i) {
+        if (!isHexadecimalDigit(id[i])) return false;
+    }
+    return true;
+}
+
+// Alle Timer-Aktionen schicken dasselbe Muster: Aktion plus Kennung.
+String timerAction(const char *action, const String &id, const String &extra = String()) {
+    if (!looksLikeTimerId(id)) return "Unbekannter Timer";
+    String json = "{\"action\":\"" + String(action) + "\",\"timer_id\":" + quoted(id);
+    if (!extra.isEmpty()) json += "," + extra;
+    json += "}";
+    const api_client::Result result = api_client::postJson("/api/tablet/action", json);
+    return result.ok ? String()
+                     : (result.error.isEmpty() ? String("Timer nicht erreichbar") : result.error);
+}
+
+}  // namespace
+
+String fetchTimers(std::vector<Timer> &timers, int &maxTimers) {
+    timers.clear();
+    maxTimers = 4;
+    JsonDocument filter;
+    filter["max"] = true;
+    filter["timers"][0]["id"] = true;
+    filter["timers"][0]["label"] = true;
+    filter["timers"][0]["duration"] = true;
+    filter["timers"][0]["remaining"] = true;
+    filter["timers"][0]["state"] = true;
+    filter["timers"][0]["repeat"] = true;
+
+    const api_client::Result result = api_client::get("/api/tablet/timers");
+    if (!result.ok) {
+        return result.error.isEmpty() ? String("Timer nicht abrufbar") : result.error;
+    }
+    JsonDocument doc;
+    if (deserializeJson(doc, result.body, DeserializationOption::Filter(filter))) {
+        return "Antwort nicht lesbar";
+    }
+    maxTimers = doc["max"] | 4;
+    for (JsonObjectConst entry : doc["timers"].as<JsonArrayConst>()) {
+        Timer timer;
+        timer.id = take(entry["id"], 32);
+        timer.label = take(entry["label"], 40);
+        timer.duration = entry["duration"] | 0;
+        timer.remaining = entry["remaining"] | 0;
+        timer.state = take(entry["state"], 10);
+        timer.repeat = entry["repeat"] | false;
+        if (!timer.id.isEmpty()) timers.push_back(timer);
+        if (static_cast<int>(timers.size()) >= maxTimers) break;
+    }
+    return String();
+}
+
+String createTimer(int seconds, const String &label, bool repeat) {
+    // Dieselben Grenzen wie im Pi. Das Geraet soll gar nicht erst Unsinn
+    // schicken, auch wenn der Server ihn ohnehin abweisen wuerde.
+    if (seconds < 10 || seconds > 24 * 3600) return "Dauer ausserhalb des Bereichs";
+    String json = "{\"action\":\"timer_create\",\"seconds\":" + String(seconds);
+    if (!label.isEmpty()) json += ",\"label\":" + quoted(label);
+    json += ",\"repeat\":";
+    json += repeat ? "true" : "false";
+    json += "}";
+    const api_client::Result result = api_client::postJson("/api/tablet/action", json);
+    return result.ok ? String()
+                     : (result.error.isEmpty() ? String("Anlegen fehlgeschlagen") : result.error);
+}
+
+String startTimer(const String &id)  { return timerAction("timer_start", id); }
+String pauseTimer(const String &id)  { return timerAction("timer_pause", id); }
+String stopTimer(const String &id)   { return timerAction("timer_stop", id); }
+String deleteTimer(const String &id) { return timerAction("timer_delete", id); }
+
+String setTimerRepeat(const String &id, bool repeat) {
+    return timerAction("timer_repeat", id,
+                       String("\"repeat\":") + (repeat ? "true" : "false"));
+}
+
 }  // namespace tablet_data

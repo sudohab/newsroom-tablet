@@ -297,7 +297,26 @@ Result postJson(const String &path, const String &json) {
         result.error = "Anfrage zu gross";
         return result;
     }
-    return request(buildUrl(path), HTTP_METHOD_POST, json, true);
+    const String url = buildUrl(path);
+    result = request(url, HTTP_METHOD_POST, json, true);
+
+    // Einmal wiederholen, wenn der Pi abwinkt.
+    //
+    // Der Pi laesst je Geraet nur eine Aktion in der Sekunde durch -- eine
+    // grobe Bremse gegen ein Geraet, das Amok laeuft. Auf einer Seite mit
+    // vielen Knoepfen (vier Timer nebeneinander) tippt ein Mensch aber
+    // schneller als das, und dann bekaeme er ein "Bitte kurz warten" fuer
+    // etwas, das voellig in Ordnung ist.
+    //
+    // Sicher ist das, weil eine 429 bedeutet: Der Pi hat die Anfrage
+    // ABGEWIESEN, es ist also nichts passiert, was sich verdoppeln koennte.
+    // Und es hebelt die Bremse nicht aus, sondern wartet sie ab: Bei
+    // Dauerfeuer ist auch der zweite Versuch zu frueh, und der zaehlt dann.
+    if (result.status == 429) {
+        delay(1100);
+        result = request(url, HTTP_METHOD_POST, json, true);
+    }
+    return result;
 }
 
 }  // namespace api_client

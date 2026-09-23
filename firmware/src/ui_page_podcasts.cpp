@@ -39,6 +39,11 @@ constexpr lv_coord_t kEpisodeWidth = kWidth - kEpisodeLeft;
 constexpr lv_coord_t kBarHeight = 46;
 constexpr lv_coord_t kEpisodeHeight = kHeight - kListTop - kBarHeight - 8;
 constexpr lv_coord_t kToggleWidth = 96;
+// Hoehe einer Folgenzeile: 8 Rand + Titelzeile + 2 + Angabenzeile + 8 Rand.
+// Die beiden Zeilenhoehen sind FEST -- siehe Kommentar in rebuildEpisodes().
+constexpr lv_coord_t kTitleLine = 28;
+constexpr lv_coord_t kInfoLine = 22;
+constexpr lv_coord_t kRowHeight = 8 + kTitleLine + 2 + kInfoLine + 8;
 constexpr lv_coord_t kTitleWidth = kEpisodeWidth - kToggleWidth - 16;
 
 enum class Job { None, LoadSubscriptions, LoadEpisodes, Play, MarkPlayed, Stop };
@@ -146,6 +151,12 @@ void rebuildSubscriptions() {
     for (const auto &podcast : subscriptions) {
         lv_obj_t *btn = lv_list_add_btn(subList, nullptr, podcast.title.c_str());
         styleListButton(btn);
+        // Ein Listenknopf laesst seine Beschriftung von Haus aus endlos
+        // durchlaufen. Bei kurzen Sendernamen faellt das nicht auf, bei
+        // Podcasttiteln liefe staendig eine Bewegung -- und jede Bewegung
+        // heisst neu zeichnen. Also abschneiden.
+        lv_obj_t *label = lv_obj_get_child(btn, 0);
+        if (label != nullptr) lv_label_set_long_mode(label, LV_LABEL_LONG_DOT);
         lv_obj_add_event_cb(btn, onSubscription, LV_EVENT_CLICKED, nullptr);
     }
 }
@@ -158,11 +169,11 @@ void rebuildEpisodes() {
         // Eine Zeile: breiter Knopf mit Titel und Angaben, daneben der
         // Umschalter „gehört". Die Breiten stehen fest, der Abstand kommt vom
         // Flex-Layout – so können die beiden nie übereinanderrutschen.
-        lv_obj_t *row = makeButtonBar(episodeArea, 0, 0, kEpisodeWidth - 10, 58);
+        lv_obj_t *row = makeButtonBar(episodeArea, 0, 0, kEpisodeWidth - 10, kRowHeight);
         lv_obj_set_style_pad_column(row, 8, 0);
 
         lv_obj_t *play = lv_btn_create(row);
-        lv_obj_set_size(play, kTitleWidth, 58);
+        lv_obj_set_size(play, kTitleWidth, kRowHeight);
         lv_obj_set_user_data(play, reinterpret_cast<void *>(static_cast<intptr_t>(i)));
         lv_obj_add_event_cb(play, onEpisode, LV_EVENT_CLICKED, nullptr);
         styleListButton(play);
@@ -170,10 +181,15 @@ void rebuildEpisodes() {
 
         // Gehörte Folgen blasser – man soll auf einen Blick sehen, was neu ist.
         const uint32_t titleColor = episode.played ? kTextMuted : kText;
+        // Beide Beschriftungen bekommen eine FESTE Hoehe, nicht nur eine
+        // Breite. Mit blosser Breite waechst eine Beschriftung in die Hoehe,
+        // sobald der Text umbricht -- ein langer Folgentitel wurde dann zwei-
+        // oder dreizeilig und lief in die Zeile darunter. Erst die feste
+        // Hoehe laesst LV_LABEL_LONG_DOT wirken: abschneiden statt umbrechen.
         lv_obj_t *title = lv_label_create(play);
         lv_obj_set_style_text_font(title, &ui_font_22, 0);
         lv_obj_set_style_text_color(title, lv_color_hex(titleColor), 0);
-        lv_obj_set_width(title, kTitleWidth - 16);
+        lv_obj_set_size(title, kTitleWidth - 16, kTitleLine);
         lv_label_set_long_mode(title, LV_LABEL_LONG_DOT);
         lv_label_set_text(title, episode.title.c_str());
         lv_obj_align(title, LV_ALIGN_TOP_LEFT, 0, 0);
@@ -181,13 +197,13 @@ void rebuildEpisodes() {
         lv_obj_t *info = lv_label_create(play);
         lv_obj_set_style_text_font(info, &ui_font_18, 0);
         lv_obj_set_style_text_color(info, lv_color_hex(kTextMuted), 0);
-        lv_obj_set_width(info, kTitleWidth - 16);
+        lv_obj_set_size(info, kTitleWidth - 16, kInfoLine);
         lv_label_set_long_mode(info, LV_LABEL_LONG_DOT);
         lv_label_set_text(info, episodeInfo(episode).c_str());
         lv_obj_align(info, LV_ALIGN_BOTTOM_LEFT, 0, 0);
 
         lv_obj_t *toggle = addBarButton(row, episode.played ? "offen" : "gehört",
-                                        onToggle, kToggleWidth, 58);
+                                        onToggle, kToggleWidth, kRowHeight);
         lv_obj_set_user_data(toggle, reinterpret_cast<void *>(static_cast<intptr_t>(i)));
     }
 }

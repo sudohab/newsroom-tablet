@@ -126,4 +126,27 @@ String saveAlarm(const String &id, const String &time, const bool days[7], bool 
 String deleteAlarm(const String &id);
 String toggleAlarm(const String &id, bool enabled);
 
+// --- Kurzzeitwecker ---------------------------------------------------------
+//
+// Der Pi schickt die Restzeit in Sekunden und den Zustand. Heruntergezaehlt
+// wird hier im Geraet, damit die Anzeige nicht im Sekundentakt fragen muss;
+// beim naechsten Abruf zieht sie sich wieder am Pi gerade.
+struct Timer {
+    String id;
+    String label;
+    int duration = 0;     // Sekunden
+    int remaining = 0;    // Sekunden
+    String state;         // "idle", "running", "paused", "expired"
+    bool repeat = false;
+};
+
+String fetchTimers(std::vector<Timer> &timers, int &maxTimers);
+
+String createTimer(int seconds, const String &label, bool repeat);
+String startTimer(const String &id);
+String pauseTimer(const String &id);
+String stopTimer(const String &id);
+String deleteTimer(const String &id);
+String setTimerRepeat(const String &id, bool repeat);
+
 }  // namespace tablet_data

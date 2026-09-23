@@ -850,3 +850,62 @@ erzwungen — das macht der Pi, der ein Abspielen waehrend der Ruhezeit mit 409
 ablehnt. Das Geraet zeigt die Meldung dann nur an.
 
 *Noch nicht am Geraet erprobt.*
+
+### 2026-09-23 — Folgenzeilen und Etappe 14: Timer-Seite
+
+**Die Schrift in den Folgenzeilen überschrieb sich.** Ursache war derselbe
+Fehler wie auf der Einstellungsseite, nur andersherum: Dort war eine
+Beschriftung zu breit, hier wurde sie zu **hoch**. Eine LVGL-Beschriftung mit
+gesetzter Breite, aber ohne gesetzte Höhe wächst nach unten, sobald der Text
+umbricht — ein langer Folgentitel wurde zwei- oder dreizeilig und lief in die
+Angabenzeile darunter. `LV_LABEL_LONG_DOT` wirkt erst, wenn die Höhe feststeht.
+
+Also: `lv_obj_set_size()` statt `lv_obj_set_width()`, Zeilenhöhen als
+Konstanten (`kTitleLine`, `kInfoLine`), Zeilenhöhe daraus gerechnet.
+
+Nebenbei behoben: Ein Listenknopf lässt seine Beschriftung von Haus aus endlos
+durchlaufen. Bei kurzen Sendernamen fällt das nicht auf, bei Podcasttiteln
+liefe ständig eine Bewegung — und jede Bewegung heißt neu zeichnen. Jetzt
+abschneiden.
+
+**Die Timer-Seite** (Etappe 14) steht zwischen „Wecker" und „WLAN". Vier Plätze
+nebeneinander, alle gleichzeitig sichtbar.
+
+Ein Platz hat zwei Leben: **leer** — dann ist die große Zahl eine Dauer, die
+man mit „+1" und „+5" aufbaut, und „Start" legt den Timer damit an und startet
+ihn in einem Zug. **Belegt** — dann ist die große Zahl die Restzeit, und die
+Knöpfe richten sich nach dem Zustand (Pause/Weiter/Stopp/Aus, dazu „Wdh" und
+„Weg"). Die Bedienelemente werden einmal angelegt und danach nur ein- und
+ausgeblendet; ein Neuaufbau bei jedem Zustandswechsel machte die Anzeige
+unruhig.
+
+**Gezählt wird im Pi**, wie besprochen: Dort hängt der Lautsprecher, und ein
+Timer übersteht so einen Neustart des Displays. Das Gerät zählt zwischen zwei
+Abrufen selbst herunter (nur die vier Zeitanzeigen werden je Sekunde neu
+beschriftet) und zieht sich alle zehn Sekunden am Pi gerade.
+
+**Zwei Entscheidungen, die im Gespräch offen waren:**
+
+* *Was beim Ablaufen passiert:* Der Pi klingelt in Schleife (`start_ringing`),
+  bis jemand „Aus" drückt — wie bei einem Anruf. Ein eigener Ton lässt sich
+  über `timers.sound.file` in der config.yaml einstellen.
+* *Was „Wiederholen" heißt:* Nach dem **Abstellen** läuft der Timer sofort
+  wieder von vorn. Nicht beim Ablaufen von selbst — sonst liefe der nächste
+  Durchgang, während der Ton noch klingelt.
+
+⚠ **Die Wiederhol-Sperre des Pi wurde zur Stolperfalle.** Er lässt je Gerät nur
+**eine Aktion in der Sekunde** durch. Auf einer Seite mit vier Timern
+nebeneinander tippt ein Mensch schneller, und bekam ein „Bitte kurz warten"
+für etwas völlig Harmloses. Die Sperre bleibt (sie ist die Bremse gegen ein
+Gerät, das Amok läuft); stattdessen wiederholt `api_client::postJson` eine
+abgewiesene Anfrage **einmal** nach 1,1 Sekunden. Das ist gefahrlos, weil eine
+429 bedeutet: Der Pi hat abgewiesen, es ist nichts passiert, was sich
+verdoppeln könnte. Und es hebelt nichts aus — bei echtem Dauerfeuer ist auch
+der zweite Versuch zu früh.
+
+✅ Timer-Kennungen sind reine Hexzeichen (ohne Bindestrich); dafür gibt es eine
+eigene, engere Prüfung als `looksLikeId`. Die Dauergrenzen (10 s bis 24 h)
+stehen dreifach: im Gerät, im Schema des Servers und im Modul.
+
+*Serverseite im Repo newsroom21, Commit `0f32e2b`. Noch nicht am Gerät
+erprobt — der Pi braucht erst das Update.*

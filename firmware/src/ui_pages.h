@@ -93,6 +93,12 @@ void activate();
 void work();
 }  // namespace alarms
 
+namespace timers {
+lv_obj_t *create(lv_obj_t *parent);
+void activate();
+void work();
+}  // namespace timers
+
 namespace wifi {
 lv_obj_t *create(lv_obj_t *parent);
 void activate();
