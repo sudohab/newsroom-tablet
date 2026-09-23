@@ -8,6 +8,7 @@
 #include "tablet_config.h"
 #include "tablet_state.h"
 #include "ui_pages.h"
+#include "ui_popup.h"
 #include "ui_theme.h"
 
 // Der Rahmen der Oberfläche: Kopfzeile, Inhaltsbereich, Menüleiste.
@@ -228,6 +229,9 @@ void begin() {
     updateClock();
     updateHeaderState();
 
+    // Zuletzt, damit es über allem liegt.
+    ui_popup::begin(screen);
+
     lv_scr_load(screen);
     lvgl_port_unlock();
 }
@@ -245,8 +249,13 @@ void tick() {
     if (tablet_state::consumeChanged()) {
         lvgl_port_lock(-1);
         updateHeaderState();
+        // Anruf und abgelaufener Timer blenden über jeder Seite auf.
+        ui_popup::update();
         lvgl_port_unlock();
     }
+
+    // Ohne Sperre: Das Abstellen eines Timers geht über das Netz.
+    ui_popup::work();
 
     // Ein Seitenwechsel wurde im Rückruf nur vorgemerkt – hier darf die Seite
     // nachladen, ohne die Anzeige zu blockieren.

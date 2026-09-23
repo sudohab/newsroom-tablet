@@ -27,6 +27,13 @@ constexpr lv_coord_t kWidth = 752;      // Inhaltsbreite (800 - 2 x 24)
 constexpr lv_coord_t kLeftWidth = 470;
 constexpr lv_coord_t kTileLeft = 500;
 constexpr lv_coord_t kTileWidth = kWidth - kTileLeft;
+// Die linke Spalte wird in zwei gleich hohe Hälften geteilt: oben der
+// nächste Termin, unten die Schlagzeile. Vorher lag die Trennlinie fest bei
+// 124, und ein Termin mit Ortsangabe schob seine Schrift darüber hinweg in
+// die Nachrichten. Jetzt hat jede Hälfte ihren festen Platz -- und was nicht
+// hineinpasst, wird abgeschnitten statt in die andere Hälfte zu laufen.
+constexpr lv_coord_t kLeftHeight = 280;
+constexpr lv_coord_t kDivider = kLeftHeight / 2;    // 140
 constexpr uint32_t kHeadlineIntervalMs = 120000;   // zwei Minuten
 constexpr uint32_t kNewsRefreshMs = 600000;        // Liste alle zehn Minuten neu
 
@@ -122,34 +129,50 @@ void showTiles() {
 lv_obj_t *create(lv_obj_t *parent) {
     page = makeSection(parent, 0, 0, kWidth, 300);
 
-    // --- links: nächster Termin ------------------------------------------
+    // --- links oben: nächster Termin (0 bis 140) --------------------------
     makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 0, 0, "NÄCHSTER TERMIN");
     labelEventWhen = makeLabel(page, &ui_font_18, kAccent, LV_ALIGN_TOP_LEFT, 0, 26, "");
+
+    // Feste Höhe, nicht nur Breite: Sonst wächst eine Beschriftung beim
+    // Umbrechen nach unten und läuft in die untere Hälfte.
     labelEventTitle = lv_label_create(page);
     lv_obj_set_style_text_font(labelEventTitle, &ui_font_30, 0);
     lv_obj_set_style_text_color(labelEventTitle, lv_color_hex(kText), 0);
     lv_obj_set_pos(labelEventTitle, 0, 50);
-    lv_obj_set_width(labelEventTitle, kLeftWidth);
-    lv_label_set_long_mode(labelEventTitle, LV_LABEL_LONG_WRAP);
+    lv_obj_set_size(labelEventTitle, kLeftWidth, 40);
+    lv_label_set_long_mode(labelEventTitle, LV_LABEL_LONG_DOT);
     lv_label_set_text(labelEventTitle, "…");
-    labelEventPlace = makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 0, 88, "");
 
-    makeSeparator(page, 0, 124, kLeftWidth, 1);
+    // Der Ort war der eigentliche Anlass: Er stand als textbreite
+    // Beschriftung da und lief nach rechts über die senkrechte Trennlinie
+    // hinaus.
+    labelEventPlace = lv_label_create(page);
+    lv_obj_set_style_text_font(labelEventPlace, &ui_font_18, 0);
+    lv_obj_set_style_text_color(labelEventPlace, lv_color_hex(kTextMuted), 0);
+    lv_obj_set_pos(labelEventPlace, 0, 94);
+    lv_obj_set_size(labelEventPlace, kLeftWidth, 24);
+    lv_label_set_long_mode(labelEventPlace, LV_LABEL_LONG_DOT);
+    lv_label_set_text(labelEventPlace, "");
 
-    // --- links: wechselnde Schlagzeile ------------------------------------
-    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 0, 140, "NACHRICHTEN");
-    labelNewsSource = makeLabel(page, &ui_font_18, kAccent, LV_ALIGN_TOP_LEFT, 0, 166, "");
+    makeSeparator(page, 0, kDivider, kLeftWidth, 1);
+
+    // --- links unten: wechselnde Schlagzeile (140 bis 280) ----------------
+    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 0, kDivider + 14,
+              "NACHRICHTEN");
+    labelNewsSource = makeLabel(page, &ui_font_18, kAccent, LV_ALIGN_TOP_LEFT,
+                                0, kDivider + 40, "");
     labelNewsTitle = lv_label_create(page);
     lv_obj_set_style_text_font(labelNewsTitle, &ui_font_22, 0);
     lv_obj_set_style_text_color(labelNewsTitle, lv_color_hex(kText), 0);
-    lv_obj_set_pos(labelNewsTitle, 0, 190);
-    lv_obj_set_width(labelNewsTitle, kLeftWidth);
-    lv_label_set_long_mode(labelNewsTitle, LV_LABEL_LONG_WRAP);
+    lv_obj_set_pos(labelNewsTitle, 0, kDivider + 64);
+    // Zwei Zeilen, dann Punkte. Schlagzeilen sind selten kurz.
+    lv_obj_set_size(labelNewsTitle, kLeftWidth, 60);
+    lv_label_set_long_mode(labelNewsTitle, LV_LABEL_LONG_DOT);
     lv_label_set_text(labelNewsTitle, "…");
 
     // --- rechts: drei Felder ----------------------------------------------
     // Senkrechte Trennlinie zwischen linker Spalte und den Feldern
-    makeSeparator(page, kTileLeft - 26, 0, 1, 280);
+    makeSeparator(page, kTileLeft - 26, 0, 1, kLeftHeight);
 
     labelCalls = makeTile(page, 0, "VERPASSTE ANRUFE", "…");
     makeSeparator(page, kTileLeft, 86, kTileWidth, 1);

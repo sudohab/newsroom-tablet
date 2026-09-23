@@ -48,6 +48,10 @@ JsonDocument makeFilter() {
     filter["warnings"]["headline"] = true;
     filter["media"]["kind"] = true;
     filter["call"]["text"] = true;
+    filter["timer"]["expired"] = true;
+    filter["timer"]["id"] = true;
+    filter["timer"]["label"] = true;
+    filter["timer"]["duration"] = true;
     filter["calendar"][0]["title"] = true;
     filter["calendar"][0]["when"] = true;
     filter["calendar"][0]["time"] = true;
@@ -112,6 +116,12 @@ void parse(const String &body) {
 
     next.callText = take(doc["call"]["text"], 80);
 
+    JsonObjectConst timer = doc["timer"];
+    next.timerExpired = timer["expired"] | 0;
+    next.timerId = take(timer["id"], 32);
+    next.timerLabel = take(timer["label"], 40);
+    next.timerDuration = timer["duration"] | 0;
+
     for (JsonObjectConst entry : doc["calendar"].as<JsonArrayConst>()) {
         Snapshot::Event event;
         event.title = take(entry["title"], 80);
@@ -162,7 +172,9 @@ void parse(const String &body) {
         && next.tempMax == snapshot.tempMax
         && next.volume == snapshot.volume
         && next.configVersion == snapshot.configVersion
-        && next.commandId == snapshot.commandId;
+        && next.commandId == snapshot.commandId
+        && next.timerExpired == snapshot.timerExpired
+        && next.timerId == snapshot.timerId;
 
     // Die Listen getrennt vergleichen: Sie kosten beim Neuaufbau am meisten.
     const bool sameEvents = sameList<Snapshot::Event>(

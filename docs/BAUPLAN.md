@@ -957,3 +957,53 @@ Dauer und Kennung prüft das Gerät vorher selbst.
 47 251 Byte über drei Minuten, 53 °C, keine Neustarts. **Kein Speicherverlust.**
 Und weil eine 404 eine gültige HTTP-Antwort ist, bleibt die TLS-Verbindung
 bestehen – das vergebliche Anklopfen kostete also auch keinen Handschlag.
+
+### 2026-09-23 — Aufblendfenster und gleiche Aufteilung der Startseite
+
+**Startseite: die linke Spalte wird jetzt halbiert.** Die Trennlinie lag fest
+bei 124; ein Termin mit Ortsangabe schob seine Schrift darüber hinweg in die
+Nachrichten. Zwei Ursachen, beide dieselbe Sorte wie schon zweimal zuvor:
+
+* Der Titel hatte nur eine **Breite**, keine Höhe – also wuchs er beim
+  Umbrechen nach unten.
+* Der Ort war eine textbreite Beschriftung (`makeLabel`) und lief nach
+  **rechts** über die senkrechte Trennlinie hinaus.
+
+Jetzt hat jede Hälfte ihren festen Platz (`kDivider = kLeftHeight / 2`), und
+alle vier Beschriftungen haben eine feste Größe mit `LV_LABEL_LONG_DOT`. Was
+nicht hineinpasst, wird abgeschnitten statt in die Nachbarschaft zu laufen.
+
+> **Merksatz, der sich jetzt dreimal bestätigt hat:** Eine LVGL-Beschriftung
+> ohne gesetzte Größe ist so groß wie ihr Text – nach rechts UND nach unten.
+> Auf einer Seite mit festen Positionen gehört zu jeder Beschriftung eine
+> feste Größe.
+
+**Aufblendfenster (`ui_popup.{h,cpp}`).** Anruf und abgelaufener Timer sollen
+auf jeder Seite zu sehen sein. Das Fenster hängt deshalb nicht an einer Seite,
+sondern direkt am Bildschirm und liegt über allem.
+
+* **Es deckt nicht den ganzen Bildschirm ab**: Die Kopfzeile mit Uhr und Datum
+  bleibt sichtbar. Wer nachts geweckt wird, will zuerst wissen, wie spät es ist.
+* **Anruf geht vor Timer**: Ein Timer lässt sich später noch abstellen, ein
+  Anruf nicht.
+* **Der Rahmen ist der einzige im ganzen Gerät.** Beim flachen Stil sonst
+  verpönt – hier trennt er das Fenster von der Seite darunter, und seine Farbe
+  sagt schon von weitem, worum es geht: rot beim Timer, grün beim Anruf.
+* **„Aus" beim Timer schickt `timer_stop`** und lässt das Fenster stehen, bis
+  der Pi bestätigt hat. Sonst sähe es aus, als wäre der Ton aus, während er
+  noch läuft. Ausgeblendet wird erst, wenn der Zustand meldet, dass nichts
+  mehr klingelt.
+* **„Weg" beim Anruf** tippt es nur beiseite – bedienen lässt sich ein Anruf
+  von hier nicht, das Display hat kein Mikrofon. Ein neuer Anruf hebt das
+  Wegtippen wieder auf.
+
+Grundlage ist ein neues Feld im Zustand (`/api/tablet/state`), der ohnehin
+alle zwei Sekunden geholt wird: `timer{expired,id,label,duration}` – vier
+Felder, nicht die ganze Timerliste. Serverseite: newsroom21 `fb707a5`.
+
+⚠ **Beobachtung zum Bauen:** Nach dem Hinzufügen einer neuen `.cpp` schlägt
+der **erste** Durchlauf fehl, der zweite geht durch (zweimal so erlebt,
+jeweils rund sechs Minuten). Vermutlich die Erzeugung der eingebetteten
+Zertifikate (`scripts/generate_embeds.py`) gegen den noch nicht
+neuaufgebauten Abhängigkeitsbaum. Noch nicht untersucht – wer hier Zeit
+verliert: einfach ein zweites Mal bauen.

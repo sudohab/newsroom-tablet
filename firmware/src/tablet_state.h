@@ -42,6 +42,14 @@ struct Snapshot {
     // Anruf (nur während es klingelt)
     String callText;
 
+    // Klingelnder Kurzzeitwecker – Grundlage für das Aufblenden auf JEDER
+    // Seite. Die ganze Timerliste steht nicht hier drin, die holt sich die
+    // Timer-Seite selbst.
+    int timerExpired = 0;         // wie viele klingeln
+    String timerId;               // der erste davon, zum Abstellen
+    String timerLabel;
+    int timerDuration = 0;        // Sekunden, für „Timer über 5 Min"
+
     // Termine und Nachrichten für die beiden Spalten der Ansicht
     struct Event {
         String title;
