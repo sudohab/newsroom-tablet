@@ -58,11 +58,23 @@
 #define LVGL_PORT_TASK_MIN_DELAY_MS             (2)         // The minimum delay of the LVGL timer task, in milliseconds
 #define LVGL_PORT_TASK_STACK_SIZE               (6 * 1024)  // The stack size of the LVGL timer task, in bytes
 #define LVGL_PORT_TASK_PRIORITY                 (2)         // The priority of the LVGL timer task
-#ifdef ARDUINO_RUNNING_CORE
-#define LVGL_PORT_TASK_CORE                     (ARDUINO_RUNNING_CORE)  // Valid if using Arduino
-#else
-#define LVGL_PORT_TASK_CORE                     (0)                     // Valid if using ESP-IDF
-#endif
+// GEAENDERT gegenueber der Vorlage (Grund im Bauplan, Eintrag zum Verrutschen):
+//
+// Der ESP32-S3 hat zwei Rechenkerne. Die Bibliothek verlangt, dass die
+// Zeichenschleife (`lv_timer_handler()`) auf DEMSELBEN Kern laeuft wie die
+// Inbetriebnahme des Bildschirms (`board->begin()`) -- sonst verrutscht das
+// Bild nach oben. Quelle: ESP32_Display_Panel, docs/envs/use_with_idf.md,
+// Abschnitt "Solution for screen drift issue", Punkt 2c.
+//
+// Die Vorlage entscheidet das ueber `ARDUINO_RUNNING_CORE`. Dieser Name kommt
+// aber aus `Arduino.h`, und diese Datei bindet `Arduino.h` nicht ein. In
+// unserem gemischten Bau (Arduino als ESP-IDF-Baustein) griff deshalb immer
+// der untere Zweig: Zeichnen auf Kern 0, Inbetriebnahme aber auf Kern 1, denn
+// `setup()` laeuft bei uns auf Kern 1 (CONFIG_ARDUINO_RUNNING_CORE=1).
+//
+// Darum steht hier fest die 1. Wer `setup()` verlegt, muss diesen Wert
+// mitziehen.
+#define LVGL_PORT_TASK_CORE                     (1)
                                                             // The core of the LVGL timer task, `-1` means the don't specify the core
                                                             // Default is the same as the main core
                                                             // This can be set to `1` only if the SoCs support dual-core,

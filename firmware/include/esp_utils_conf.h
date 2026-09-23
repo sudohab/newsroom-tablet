@@ -31,7 +31,18 @@
  *  - ESP_UTILS_LOG_LEVEL_ERROR:   Critical errors, software module cannot recover on its own
  *  - ESP_UTILS_LOG_LEVEL_NONE:    No log output (highest level) (Minimum code size)
  */
-#define ESP_UTILS_CONF_LOG_LEVEL                            (ESP_UTILS_LOG_LEVEL_DEBUG)
+// GEAENDERT gegenueber der Vorlage: DEBUG -> WARNING.
+//
+// Auf DEBUG schrieb die Bibliothek fuer JEDEN einzelnen Zeichenvorgang eine
+// Zeile ueber die serielle Schnittstelle -- also mehrere hundert Zeilen je
+// Sekunde, mitten in dem Pfad, der das Bild an das Panel liefert. Bei 115200
+// Bit je Sekunde kostet eine solche Zeile rund 10 Millisekunden, in denen der
+// Vorratspuffer des Panels nicht nachgefuellt wird. Genau daraus entsteht das
+// Verrutschen.
+//
+// Zum Suchen eines Fehlers kann man hier wieder DEBUG eintragen -- aber nur
+// voruebergehend, und dann ist das Bild erwartungsgemaess unruhig.
+#define ESP_UTILS_CONF_LOG_LEVEL                            (ESP_UTILS_LOG_LEVEL_WARNING)
 #if ESP_UTILS_CONF_LOG_LEVEL == ESP_UTILS_LOG_LEVEL_DEBUG
 
     /**

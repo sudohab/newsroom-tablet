@@ -765,3 +765,45 @@ Vertippen bei zwanzig Datenleitungen.
 Gleichzeitig das Layout der Einstellungsseite entzerrt – zwei lange
 Überschriften nebeneinander hatten sich überschrieben. Jetzt eine gemeinsame
 Überschrift „BILDSCHIRM AUS NACH" und darunter die kurzen „AM TAG" / „NACHTS".
+
+### 2026-09-23 — Verrutschen: zwei echte Ursachen gefunden
+
+Die groesseren Austastluecken (Eintrag davor) haben das Verrutschen **nicht**
+behoben. Die Suche ging deshalb weiter, diesmal nicht ueber die
+Panel-Zeitsteuerung, sondern ueber die Anleitung der Bibliothek selbst:
+`docs/envs/use_with_idf.md`, Abschnitt *Solution for screen drift issue*.
+
+**Ursache 1: Die Zeichenschleife lief auf dem falschen Rechenkern.**
+
+Die Anleitung verlangt unter Punkt 2c, dass `lv_timer_handler()` auf demselben
+Kern laeuft wie `board->begin()`. Die Vorlage entscheidet das ueber
+`ARDUINO_RUNNING_CORE` — ein Name aus `Arduino.h`, das `lvgl_v8_port.cpp` aber
+nicht einbindet. In unserem gemischten Bau (Arduino als ESP-IDF-Baustein) war
+der Name also nie definiert, und es griff immer der ESP-IDF-Zweig: **Zeichnen
+auf Kern 0**, Inbetriebnahme des Bildschirms aber auf **Kern 1**, weil `setup()`
+bei uns auf Kern 1 laeuft (`CONFIG_ARDUINO_RUNNING_CORE=1`).
+
+Behoben in `src/lvgl_port/lvgl_v8_port.h`: `LVGL_PORT_TASK_CORE` steht jetzt
+fest auf `1`, mit Begruendung im Quelltext. Wer `setup()` verlegt, muss den
+Wert mitziehen.
+
+**Ursache 2: Die Bibliothek protokollierte jeden Zeichenvorgang.**
+
+`include/esp_utils_conf.h` stand auf `ESP_UTILS_LOG_LEVEL_DEBUG`. Damit schrieb
+die Bibliothek fuer **jeden einzelnen** `drawBitmap`-Aufruf eine Zeile ueber die
+serielle Schnittstelle — mehrere hundert je Sekunde, mitten in dem Pfad, der
+das Bild an das Panel liefert. Bei 115200 Bit je Sekunde kostet eine solche
+Zeile rund 10 Millisekunden, in denen der Vorratspuffer des Panels nicht
+nachgefuellt wird. Jetzt `ESP_UTILS_LOG_LEVEL_WARNING`.
+
+Sichtbar wurde das erst beim Mitlesen der seriellen Ausgabe — dieselbe Lehre
+wie beim Neustart-Kreislauf: **erst das Protokoll lesen, dann Werte drehen.**
+
+*Geprueft nach dem Aufspielen:* nur noch die `[zustand]`-Zeilen, keine
+Neustarts, 51 KB interner Speicher frei, 54 Grad.
+
+*Nicht die Loesung, aber geprueft und verworfen:* `CONFIG_SPIRAM_XIP_FROM_PSRAM`
+(von der Anleitung fuer ESP-IDF ab 5.3 empfohlen, wir haben 5.5.1). Ein Blick
+in `components/esp_psram/esp32s3/Kconfig.spiram` zeigt: Auf dem ESP32-S3 ist
+diese Option nur eine Sammelschaltung, die genau `SPIRAM_FETCH_INSTRUCTIONS`
+und `SPIRAM_RODATA` einschaltet — beides haben wir laengst. Kein Unterschied.
