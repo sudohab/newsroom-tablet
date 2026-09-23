@@ -717,3 +717,23 @@ Deckkraft sich mit der eingestellten Helligkeit ändert. Sie liegt über allen
 Seiten – auch über künftigen – und nimmt keine Berührungen an. Die
 Hintergrundbeleuchtung selbst bleibt an; nur „ganz aus" schaltet sie wirklich
 ab, denn mehr kann der Schalter am CH422G nicht.
+
+### 2026-09-23 – Helligkeitsregler wieder entfernt
+
+Hannes: „Die Helligkeit am Tag und Nacht können wir rausnehmen, da es ja ein
+Schalter ist – nehmen wir lieber eine Abschaltzeit am Tag auf."
+
+Richtig, und konsequenter als mein Zwischenschritt: Die Regler dimmten das
+Bild über eine schwarze Fläche. Das funktionierte, war aber eine Regelung, die
+so tat, als könne das Gerät etwas, das es nicht kann – und sie kostete bei
+jedem Neuzeichnen zusätzliche Rechenzeit, weil über die ganze Fläche
+verrechnet werden musste.
+
+Jetzt stattdessen **zwei Abschaltzeiten**: eine für den Tag, eine für die
+Nacht, jeweils nie/1/2/5/10/30/60 Minuten. Der Nachtmodus legt nur noch fest,
+**welche** der beiden gerade gilt. Voreinstellung: tagsüber „nie" (ein Wecker,
+der von selbst dunkel wird, überrascht), nachts fünf Minuten (damit er nicht
+ins Zimmer leuchtet). Eine Berührung weckt ihn – ohne als Bedienung zu zählen.
+
+Auf der Seite steht jetzt auch, warum es keinen Helligkeitsregler gibt. Eine
+ehrliche Zeile ist besser als ein Regler, der nichts tut.

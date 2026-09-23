@@ -12,14 +12,9 @@ using namespace esp_panel::drivers;
 namespace display_control {
 namespace {
 
-// Die Abdunkelungsfläche liegt über allem und nimmt keine Berührungen an –
-// sonst könnte man die Oberfläche darunter nicht mehr bedienen.
-lv_obj_t *dimLayer = nullptr;
-
 bool screenOff = false;
 uint32_t lastActivityMs = 0;
 uint32_t lastCheckMs = 0;
-bool lastNightState = false;
 
 // Die Beleuchtung des Boards, von main.cpp durchgereicht.
 Backlight *backlightDevice = nullptr;
@@ -29,43 +24,10 @@ void applyBacklight(bool on) {
     if (backlightDevice != nullptr) backlightDevice->setBrightness(on ? 100 : 0);
 }
 
-// Deckkraft der Abdunkelung aus der gewünschten Helligkeit.
-// 100 % = gar nicht abdunkeln, 10 % = kräftig abdunkeln (aber nie ganz).
-lv_opa_t dimOpacity(uint8_t percent) {
-    if (percent >= 100) return LV_OPA_TRANSP;
-    if (percent < 10) percent = 10;
-    // 100 % -> 0, 10 % -> 216 (von 255). Linear dazwischen.
-    return static_cast<lv_opa_t>((100 - percent) * 240 / 90);
-}
-
-void applyLevel(uint8_t percent) {
-    if (dimLayer == nullptr) return;
-    lv_obj_set_style_bg_opa(dimLayer, dimOpacity(percent), 0);
-}
-
-uint8_t currentLevel() {
-    return nightActive() ? settings_store::nightBrightness() : settings_store::brightness();
-}
-
 }  // namespace
 
 void begin(Backlight *backlight) {
     backlightDevice = backlight;
-    lvgl_port_lock(-1);
-    // Auf der obersten Ebene von LVGL: Sie liegt über allen Bildschirmen, also
-    // wirkt die Abdunkelung auf jeder Seite – auch auf künftigen.
-    dimLayer = lv_obj_create(lv_layer_top());
-    lv_obj_set_size(dimLayer, LV_HOR_RES, LV_VER_RES);
-    lv_obj_set_pos(dimLayer, 0, 0);
-    lv_obj_set_style_bg_color(dimLayer, lv_color_black(), 0);
-    lv_obj_set_style_border_width(dimLayer, 0, 0);
-    lv_obj_set_style_radius(dimLayer, 0, 0);
-    // Keine Berührungen abfangen und nicht scrollen: Die Fläche ist nur Optik.
-    lv_obj_clear_flag(dimLayer, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_clear_flag(dimLayer, LV_OBJ_FLAG_SCROLLABLE);
-    applyLevel(currentLevel());
-    lvgl_port_unlock();
-
     applyBacklight(true);
     lastActivityMs = millis();
 }
@@ -90,17 +52,9 @@ void loop() {
         }
     }
 
-    // Nachtmodus: Helligkeit wechseln, wenn die Stunde die Grenze überschreitet.
-    const bool night = nightActive();
-    if (night != lastNightState) {
-        lastNightState = night;
-        lvgl_port_lock(-1);
-        applyLevel(currentLevel());
-        lvgl_port_unlock();
-    }
-
-    // Abschaltzeit
-    const uint16_t minutes = settings_store::screenOffMinutes();
+    // Welche Abschaltzeit gilt gerade – die für den Tag oder die für die Nacht?
+    const uint16_t minutes = nightActive() ? settings_store::nightOffMinutes()
+                                           : settings_store::dayOffMinutes();
     if (!screenOff && minutes > 0 && idleMs > static_cast<uint32_t>(minutes) * 60000UL) {
         screenOff = true;
         applyBacklight(false);
@@ -109,32 +63,8 @@ void loop() {
 
 // --- Einstellungen ----------------------------------------------------------
 
-void setDayLevel(uint8_t percent) {
-    settings_store::setBrightness(percent);
-    if (!nightActive()) {
-        lvgl_port_lock(-1);
-        applyLevel(percent);
-        lvgl_port_unlock();
-    }
-}
-uint8_t dayLevel() { return settings_store::brightness(); }
-
-void setNightLevel(uint8_t percent) {
-    settings_store::setNightBrightness(percent);
-    if (nightActive()) {
-        lvgl_port_lock(-1);
-        applyLevel(percent);
-        lvgl_port_unlock();
-    }
-}
-uint8_t nightLevel() { return settings_store::nightBrightness(); }
-
 void setNightHours(uint8_t startHour, uint8_t endHour) {
     settings_store::setNightHours(startHour, endHour);
-    lastNightState = nightActive();
-    lvgl_port_lock(-1);
-    applyLevel(currentLevel());
-    lvgl_port_unlock();
 }
 uint8_t nightStart() { return settings_store::nightStartHour(); }
 uint8_t nightEnd() { return settings_store::nightEndHour(); }
@@ -153,8 +83,11 @@ bool nightActive() {
                          : (hour >= start && hour < end);
 }
 
-void setOffAfterMinutes(uint16_t minutes) { settings_store::setScreenOffMinutes(minutes); }
-uint16_t offAfterMinutes() { return settings_store::screenOffMinutes(); }
+void setDayOffMinutes(uint16_t minutes) { settings_store::setDayOffMinutes(minutes); }
+uint16_t dayOffMinutes() { return settings_store::dayOffMinutes(); }
+
+void setNightOffMinutes(uint16_t minutes) { settings_store::setNightOffMinutes(minutes); }
+uint16_t nightOffMinutes() { return settings_store::nightOffMinutes(); }
 
 void turnOff() {
     screenOff = true;

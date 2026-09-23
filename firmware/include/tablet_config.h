@@ -25,16 +25,16 @@ constexpr char kTimezone[] = "CET-1CEST,M3.5.0,M10.5.0/3";
 constexpr char kNtpPrimary[] = "192.168.178.1";
 constexpr char kNtpSecondary[] = "de.pool.ntp.org";
 
-// Helligkeit in Prozent
-constexpr uint8_t kDefaultBrightness = 80;
-constexpr uint8_t kDefaultNightBrightness = 25;   // nachts deutlich dunkler
-constexpr uint8_t kDefaultNightStart = 22;        // Nachtmodus von 22 Uhr …
-constexpr uint8_t kDefaultNightEnd = 7;           // … bis 7 Uhr
-// Bildschirm nach dieser Zeit ohne Berührung abschalten. 0 = nie.
-// Voreinstellung 0: Ein Wecker, der von selbst dunkel wird, überrascht sonst.
-constexpr uint16_t kDefaultScreenOffMinutes = 0;
-constexpr uint8_t kMinBrightness = 10;  // nie ganz dunkel: sonst wirkt das
-                                        // Gerät defekt und ist nicht bedienbar
+// Nachtmodus: von 22 Uhr bis 7 Uhr
+constexpr uint8_t kDefaultNightStart = 22;
+constexpr uint8_t kDefaultNightEnd = 7;
+
+// Abschaltzeiten in Minuten (0 = nie abschalten).
+// Tagsüber bleibt die Anzeige stehen – ein Wecker, der von selbst dunkel wird,
+// überrascht. Nachts geht er nach fünf Minuten aus, damit er nicht ins Zimmer
+// leuchtet; eine Berührung weckt ihn.
+constexpr uint16_t kDefaultDayOffMinutes = 0;
+constexpr uint16_t kDefaultNightOffMinutes = 5;
 
 // Zeitverhalten
 constexpr uint32_t kWifiConnectTimeoutMs = 20000;  // Verbindungsversuch

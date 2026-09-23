@@ -1,4 +1,4 @@
-// Helligkeit, Nachtmodus und Bildschirm-Abschaltung.
+// Nachtmodus und Bildschirm-Abschaltung.
 //
 // **Wichtig zur Hardware:** Die Hintergrundbeleuchtung dieses Boards hängt am
 // IO-Expander CH422G und ist ein **reiner Schalter** – an oder aus, nichts
@@ -6,13 +6,11 @@
 // daraus aber nur „größer als null = an" (nachgesehen im Treiber
 // `esp_panel_backlight_switch_expander.cpp`).
 //
-// Deshalb zwei Wege:
-//   • **Dimmen** geschieht über eine dunkle Fläche, die über der Oberfläche
-//     liegt. Das Panel leuchtet gleich hell weiter, wirkt aber dunkler – für
-//     den Nachttisch völlig ausreichend und ohne Zusatzteile.
-//   • **Ganz aus** schaltet die Beleuchtung wirklich ab. Der Touchcontroller
-//     arbeitet weiter; die erste Berührung schaltet sie wieder ein und wird
-//     nicht als Bedienung gewertet.
+// Deshalb gibt es hier **keine Helligkeitsregelung** – ein Regler, der nichts
+// regelt, wäre irreführend. Gesteuert wird stattdessen, **wann** der
+// Bildschirm dunkel ist: getrennte Abschaltzeiten für Tag und Nacht. Der
+// Touchcontroller arbeitet weiter, wenn die Beleuchtung aus ist; die erste
+// Berührung schaltet sie wieder ein und wird nicht als Bedienung gewertet.
 #pragma once
 
 #include <Arduino.h>
@@ -30,27 +28,22 @@ void begin(esp_panel::drivers::Backlight *backlight);
 // Regelmäßig aus loop() aufrufen: Nachtmodus, Abschaltzeit, Aufwecken.
 void loop();
 
-// --- Helligkeit -------------------------------------------------------------
-// 10 bis 100. Darunter wird nicht gegangen: Ein schwarzer Bildschirm wirkt
-// defekt – wer ihn dunkel will, schaltet ihn aus.
-void setDayLevel(uint8_t percent);
-uint8_t dayLevel();
-
-void setNightLevel(uint8_t percent);
-uint8_t nightLevel();
-
 // --- Nachtmodus -------------------------------------------------------------
-// Zwischen diesen Stunden gilt die Nachthelligkeit. Sind beide gleich, ist der
-// Nachtmodus aus.
+// Zwischen diesen Stunden gilt die Nacht-Abschaltzeit. Sind beide gleich, ist
+// der Nachtmodus aus und es gilt überall die Tageszeit.
 void setNightHours(uint8_t startHour, uint8_t endHour);
 uint8_t nightStart();
 uint8_t nightEnd();
 bool nightActive();
 
 // --- Bildschirm abschalten --------------------------------------------------
-// Nach so vielen Minuten ohne Berührung geht die Beleuchtung aus (0 = nie).
-void setOffAfterMinutes(uint16_t minutes);
-uint16_t offAfterMinutes();
+// Nach so vielen Minuten ohne Berührung geht die Beleuchtung aus (0 = nie),
+// getrennt für Tag und Nacht.
+void setDayOffMinutes(uint16_t minutes);
+uint16_t dayOffMinutes();
+
+void setNightOffMinutes(uint16_t minutes);
+uint16_t nightOffMinutes();
 
 // Von Hand abschalten; die nächste Berührung weckt wieder auf.
 void turnOff();

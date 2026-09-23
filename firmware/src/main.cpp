@@ -126,10 +126,11 @@ void setup() {
         ESP.restart();
     }
 
+    // Beleuchtung einschalten. Ein Prozentwert waere hier irrefuehrend: Der
+    // Schalter am CH422G kennt nur an und aus. Ab wann sie ausgeht, regelt
+    // display_control anhand der Abschaltzeiten.
     auto backlight = board->getBacklight();
-    if (backlight != nullptr) {
-        backlight->setBrightness(settings_store::brightness());
-    }
+    if (backlight != nullptr) backlight->setBrightness(100);
 
     Serial.printf("[start] vor LVGL: %u Byte intern frei\n", ESP.getFreeHeap());
     if (!lvgl_port_init(board->getLCD(), board->getTouch())) {

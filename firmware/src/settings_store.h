@@ -44,22 +44,24 @@ bool hasApiToken();
 void clearApiToken();
 
 // --- Anzeige ----------------------------------------------------------------
-// „Helligkeit" heißt hier: wie stark das Bild abgedunkelt wird. Die
-// Hintergrundbeleuchtung selbst kann dieses Board nur an oder aus (siehe
-// display_control.h).
-uint8_t brightness();               // Tag, 10..100 Prozent
-bool setBrightness(uint8_t percent);
+// Eine Helligkeitsregelung gibt es bewusst nicht: Die Hintergrundbeleuchtung
+// dieses Boards hängt am IO-Expander CH422G und ist ein reiner Schalter – an
+// oder aus. Ein Regler, der nichts regelt, wäre irreführend. Stattdessen wird
+// über die Abschaltzeiten gesteuert, wann der Bildschirm dunkel ist.
 
-uint8_t nightBrightness();          // Nacht, 10..100 Prozent
-bool setNightBrightness(uint8_t percent);
-
-// Nachtmodus von … bis (volle Stunden, 0..23). Beide gleich = aus.
+// Nachtmodus von … bis (volle Stunden, 0..23). Beide gleich = kein Nachtmodus,
+// dann gilt überall die Tageszeit.
 uint8_t nightStartHour();
 uint8_t nightEndHour();
 bool setNightHours(uint8_t startHour, uint8_t endHour);
 
-// Nach so vielen Minuten ohne Berührung geht der Bildschirm aus (0 = nie).
-uint16_t screenOffMinutes();
-bool setScreenOffMinutes(uint16_t minutes);
+// Nach so vielen Minuten ohne Berührung geht der Bildschirm aus (0 = nie) –
+// getrennt für Tag und Nacht, weil man nachts meist schnelle Dunkelheit will
+// und tagsüber eine stehende Anzeige.
+uint16_t dayOffMinutes();
+bool setDayOffMinutes(uint16_t minutes);
+
+uint16_t nightOffMinutes();
+bool setNightOffMinutes(uint16_t minutes);
 
 }  // namespace settings_store

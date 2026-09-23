@@ -6,13 +6,16 @@
 #include "ui_pages.h"
 #include "ui_theme.h"
 
-// Einstellungen des Geräts: Helligkeit, Nachtmodus, Bildschirm abschalten.
+// Einstellungen des Geräts: Nachtmodus und Abschaltzeiten.
 //
 // Alles hier wirkt **sofort** und wird im Gerät gespeichert; es gibt bewusst
-// keinen „Speichern"-Knopf. Wer die Helligkeit einstellt, will sie sehen.
+// keinen „Speichern"-Knopf.
 //
-// Zur Erinnerung (siehe display_control.h): Die Hintergrundbeleuchtung kann
-// dieses Board nur an oder aus. „Helligkeit" dunkelt deshalb das Bild ab.
+// Eine Helligkeitsregelung gibt es nicht, und das ist Absicht: Die
+// Hintergrundbeleuchtung dieses Boards ist ein reiner Schalter (siehe
+// display_control.h). Ein Regler, der nur zwischen „an" und „an" wählt, wäre
+// irreführend. Geregelt wird stattdessen, **wann** der Bildschirm dunkel ist –
+// getrennt für Tag und Nacht.
 
 namespace ui_pages {
 namespace settings {
@@ -24,14 +27,11 @@ constexpr lv_coord_t kWidth = 752;
 constexpr lv_coord_t kHeight = 300;
 
 lv_obj_t *page = nullptr;
-lv_obj_t *sliderDay = nullptr;
-lv_obj_t *sliderNight = nullptr;
-lv_obj_t *labelDay = nullptr;
-lv_obj_t *labelNight = nullptr;
 lv_obj_t *switchNight = nullptr;
 lv_obj_t *rollerStart = nullptr;
 lv_obj_t *rollerEnd = nullptr;
-lv_obj_t *rollerOff = nullptr;
+lv_obj_t *rollerDayOff = nullptr;
+lv_obj_t *rollerNightOff = nullptr;
 lv_obj_t *status = nullptr;
 
 // Abschaltzeiten zur Auswahl – in Minuten, gleiche Reihenfolge wie im Text.
@@ -47,18 +47,6 @@ String hourOptions() {
     return text;
 }
 
-void onDayChanged(lv_event_t *event) {
-    const int value = lv_slider_get_value(lv_event_get_target(event));
-    display_control::setDayLevel(static_cast<uint8_t>(value));
-    lv_label_set_text(labelDay, (String(value) + " %").c_str());
-}
-
-void onNightChanged(lv_event_t *event) {
-    const int value = lv_slider_get_value(lv_event_get_target(event));
-    display_control::setNightLevel(static_cast<uint8_t>(value));
-    lv_label_set_text(labelNight, (String(value) + " %").c_str());
-}
-
 // Nachtmodus aus = Beginn und Ende gleich setzen (so merkt es sich das Gerät,
 // ohne einen zusätzlichen Schalter zu speichern).
 void applyNightHours() {
@@ -72,13 +60,18 @@ void applyNightHours() {
 void onNightSwitch(lv_event_t *) { applyNightHours(); }
 void onHourChanged(lv_event_t *) { applyNightHours(); }
 
-void onOffChanged(lv_event_t *event) {
+void onDayOffChanged(lv_event_t *event) {
     const uint16_t index = lv_roller_get_selected(lv_event_get_target(event));
     if (index >= sizeof(kOffChoices) / sizeof(kOffChoices[0])) return;
-    display_control::setOffAfterMinutes(kOffChoices[index]);
-    lv_label_set_text(status, kOffChoices[index] == 0
-                          ? "Bildschirm bleibt an"
-                          : "Bildschirm geht aus, Berührung weckt ihn");
+    display_control::setDayOffMinutes(kOffChoices[index]);
+    lv_label_set_text(status, "Gespeichert");
+}
+
+void onNightOffChanged(lv_event_t *event) {
+    const uint16_t index = lv_roller_get_selected(lv_event_get_target(event));
+    if (index >= sizeof(kOffChoices) / sizeof(kOffChoices[0])) return;
+    display_control::setNightOffMinutes(kOffChoices[index]);
+    lv_label_set_text(status, "Gespeichert");
 }
 
 void onOffNow(lv_event_t *) {
@@ -87,19 +80,22 @@ void onOffNow(lv_event_t *) {
     display_control::turnOff();
 }
 
-lv_obj_t *makeSlider(lv_obj_t *parent, lv_coord_t y, const char *caption,
-                     lv_event_cb_t handler, lv_obj_t **valueLabel) {
-    makeLabel(parent, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 0, y, caption);
-    lv_obj_t *slider = lv_slider_create(parent);
-    lv_obj_set_size(slider, 300, 14);
-    lv_obj_set_pos(slider, 0, y + 28);
-    lv_slider_set_range(slider, cfg::kMinBrightness, 100);
-    lv_obj_set_style_bg_color(slider, lv_color_hex(kSurface), 0);
-    lv_obj_set_style_bg_color(slider, lv_color_hex(kAccent), LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(slider, lv_color_hex(0xffffff), LV_PART_KNOB);
-    lv_obj_add_event_cb(slider, handler, LV_EVENT_VALUE_CHANGED, nullptr);
-    *valueLabel = makeLabel(parent, &ui_font_22, kText, LV_ALIGN_TOP_LEFT, 320, y + 20, "–");
-    return slider;
+// Eine Auswahlwalze für die Abschaltzeit.
+lv_obj_t *makeOffRoller(lv_obj_t *parent, lv_coord_t x, lv_coord_t y,
+                        const char *caption, lv_event_cb_t handler) {
+    makeLabel(parent, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, x, y, caption);
+    lv_obj_t *roller = lv_roller_create(parent);
+    lv_roller_set_options(roller, kOffText, LV_ROLLER_MODE_NORMAL);
+    lv_obj_set_pos(roller, x, y + 24);
+    lv_obj_set_width(roller, 150);
+    lv_roller_set_visible_row_count(roller, 3);
+    lv_obj_set_style_text_font(roller, &ui_font_22, 0);
+    lv_obj_set_style_bg_color(roller, lv_color_hex(kSurface), 0);
+    lv_obj_set_style_text_color(roller, lv_color_hex(kText), 0);
+    lv_obj_set_style_border_width(roller, 0, 0);
+    lv_obj_set_style_bg_color(roller, lv_color_hex(kAccent), LV_PART_SELECTED);
+    lv_obj_add_event_cb(roller, handler, LV_EVENT_VALUE_CHANGED, nullptr);
+    return roller;
 }
 
 lv_obj_t *makeHourRoller(lv_obj_t *parent, lv_coord_t x, lv_coord_t y, const char *caption) {
@@ -125,19 +121,19 @@ lv_obj_t *create(lv_obj_t *parent) {
     makeTitle(page, "Einstellungen");
     status = makeStatus(page);
 
-    // --- links: Helligkeit -------------------------------------------------
-    sliderDay = makeSlider(page, 46, "HELLIGKEIT AM TAG", onDayChanged, &labelDay);
-    sliderNight = makeSlider(page, 124, "HELLIGKEIT NACHTS", onNightChanged, &labelNight);
+    // --- links: wann geht der Bildschirm aus? -----------------------------
+    rollerDayOff = makeOffRoller(page, 0, 46, "BILDSCHIRM AUS AM TAG", onDayOffChanged);
+    rollerNightOff = makeOffRoller(page, 190, 46, "IN DER NACHT", onNightOffChanged);
 
-    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 0, 202,
-              "Die Beleuchtung dieses Geräts kennt nur an und aus –");
-    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 0, 224,
-              "„dunkler“ heißt deshalb: das Bild wird abgedunkelt.");
+    makeButton(page, "Jetzt aus", onOffNow, 150, 46, LV_ALIGN_TOP_LEFT, 0, 190, kAccent);
 
-    // --- rechts: Nachtmodus und Abschalten ---------------------------------
-    makeSeparator(page, 420, 46, 1, kHeight - 50);
+    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 0, 248,
+              "Eine Berührung weckt den Bildschirm wieder auf.");
 
-    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 450, 46, "NACHTMODUS");
+    // --- rechts: Nachtmodus ------------------------------------------------
+    makeSeparator(page, 400, 46, 1, kHeight - 50);
+
+    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 430, 46, "NACHTMODUS");
     switchNight = lv_switch_create(page);
     lv_obj_set_size(switchNight, 56, 30);
     lv_obj_set_pos(switchNight, 640, 42);
@@ -146,38 +142,22 @@ lv_obj_t *create(lv_obj_t *parent) {
                               LV_PART_INDICATOR | LV_STATE_CHECKED);
     lv_obj_add_event_cb(switchNight, onNightSwitch, LV_EVENT_VALUE_CHANGED, nullptr);
 
-    rollerStart = makeHourRoller(page, 450, 80, "VON");
-    rollerEnd = makeHourRoller(page, 600, 80, "BIS");
+    rollerStart = makeHourRoller(page, 430, 90, "VON");
+    rollerEnd = makeHourRoller(page, 590, 90, "BIS");
 
-    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 450, 180,
-              "BILDSCHIRM AUS NACH");
-    rollerOff = lv_roller_create(page);
-    lv_roller_set_options(rollerOff, kOffText, LV_ROLLER_MODE_NORMAL);
-    lv_obj_set_pos(rollerOff, 450, 204);
-    lv_obj_set_width(rollerOff, 130);
-    lv_roller_set_visible_row_count(rollerOff, 2);
-    lv_obj_set_style_text_font(rollerOff, &ui_font_22, 0);
-    lv_obj_set_style_bg_color(rollerOff, lv_color_hex(kSurface), 0);
-    lv_obj_set_style_text_color(rollerOff, lv_color_hex(kText), 0);
-    lv_obj_set_style_border_width(rollerOff, 0, 0);
-    lv_obj_set_style_bg_color(rollerOff, lv_color_hex(kAccent), LV_PART_SELECTED);
-    lv_obj_add_event_cb(rollerOff, onOffChanged, LV_EVENT_VALUE_CHANGED, nullptr);
-
-    makeButton(page, "Jetzt aus", onOffNow, 130, 46, LV_ALIGN_TOP_LEFT, 600, 222);
+    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 430, 200,
+              "In dieser Zeit gilt die Nacht-Abschaltzeit.");
+    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 430, 226,
+              "Eine Helligkeitsregelung hat dieses Gerät nicht:");
+    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 430, 248,
+              "die Beleuchtung kennt nur an und aus.");
     return page;
 }
 
 void activate() {
     // Die gespeicherten Werte in die Bedienelemente übernehmen.
-    const uint8_t day = display_control::dayLevel();
-    const uint8_t night = display_control::nightLevel();
     const uint8_t start = display_control::nightStart();
     const uint8_t end = display_control::nightEnd();
-
-    lv_slider_set_value(sliderDay, day, LV_ANIM_OFF);
-    lv_label_set_text(labelDay, (String(day) + " %").c_str());
-    lv_slider_set_value(sliderNight, night, LV_ANIM_OFF);
-    lv_label_set_text(labelNight, (String(night) + " %").c_str());
 
     if (start == end) {
         lv_obj_clear_state(switchNight, LV_STATE_CHECKED);
@@ -191,12 +171,11 @@ void activate() {
         lv_roller_set_selected(rollerEnd, end, LV_ANIM_OFF);
     }
 
-    const uint16_t minutes = display_control::offAfterMinutes();
+    const uint16_t day = display_control::dayOffMinutes();
+    const uint16_t night = display_control::nightOffMinutes();
     for (size_t i = 0; i < sizeof(kOffChoices) / sizeof(kOffChoices[0]); ++i) {
-        if (kOffChoices[i] == minutes) {
-            lv_roller_set_selected(rollerOff, i, LV_ANIM_OFF);
-            break;
-        }
+        if (kOffChoices[i] == day) lv_roller_set_selected(rollerDayOff, i, LV_ANIM_OFF);
+        if (kOffChoices[i] == night) lv_roller_set_selected(rollerNightOff, i, LV_ANIM_OFF);
     }
     lv_label_set_text(status, "");
 }
