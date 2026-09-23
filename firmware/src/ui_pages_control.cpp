@@ -249,8 +249,8 @@ lv_obj_t *create(lv_obj_t *parent) {
     // Weckton am Gerät – vorbereitet, aber noch ohne Wirkung: Das Board hat
     // keine Tonausgabe. Der Schalter bleibt deshalb ausgegraut, damit klar
     // ist, dass es ihn geben wird, er aber noch nichts tut.
-    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 464, 236,
-              "AM GERÄT KLINGELN (noch ohne Ton)");
+    makeWrappedLabel(page, &ui_font_18, kTextMuted, 464, 232, kWidth - 480,
+                     "AM GERÄT KLINGELN (noch ohne Ton)");
     deviceSwitch = lv_switch_create(page);
     lv_obj_set_size(deviceSwitch, 48, 26);
     lv_obj_set_pos(deviceSwitch, 464, 260);

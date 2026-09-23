@@ -51,9 +51,19 @@ lv_obj_t *makeSeparator(lv_obj_t *parent, lv_coord_t x, lv_coord_t y,
                         lv_coord_t w, lv_coord_t h);
 
 // Beschriftung mit Schrift und Farbe.
+//
+// Achtung: Eine solche Beschriftung ist **so breit wie ihr Text**. Für längere
+// Sätze `makeWrappedLabel` nehmen – sonst läuft der Text über die Spalte
+// hinaus in die nächste (am Gerät passiert und behoben).
 lv_obj_t *makeLabel(lv_obj_t *parent, const lv_font_t *font, uint32_t color,
                     lv_align_t align, lv_coord_t x, lv_coord_t y,
                     const char *text = "");
+
+// Beschriftung mit fester Breite: Zu langer Text wird umgebrochen statt die
+// Spalte zu verlassen.
+lv_obj_t *makeWrappedLabel(lv_obj_t *parent, const lv_font_t *font, uint32_t color,
+                           lv_coord_t x, lv_coord_t y, lv_coord_t width,
+                           const char *text = "");
 
 // Knopf. `color` färbt die Fläche (0 = neutrale Fläche, Text farbig).
 lv_obj_t *makeButton(lv_obj_t *parent, const char *text, lv_event_cb_t handler,

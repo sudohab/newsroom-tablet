@@ -127,8 +127,10 @@ lv_obj_t *create(lv_obj_t *parent) {
 
     makeButton(page, "Jetzt aus", onOffNow, 150, 46, LV_ALIGN_TOP_LEFT, 0, 190, kAccent);
 
-    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 0, 248,
-              "Eine Berührung weckt den Bildschirm wieder auf.");
+    // Feste Breite: Ohne sie waere die Zeile so breit wie ihr Text und liefe
+    // ueber die Trennlinie in die rechte Spalte.
+    makeWrappedLabel(page, &ui_font_18, kTextMuted, 0, 244, 360,
+                     "Eine Berührung weckt den Bildschirm wieder auf.");
 
     // --- rechts: Nachtmodus ------------------------------------------------
     makeSeparator(page, 400, 46, 1, kHeight - 50);
@@ -145,12 +147,11 @@ lv_obj_t *create(lv_obj_t *parent) {
     rollerStart = makeHourRoller(page, 430, 90, "VON");
     rollerEnd = makeHourRoller(page, 590, 90, "BIS");
 
-    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 430, 200,
-              "In dieser Zeit gilt die Nacht-Abschaltzeit.");
-    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 430, 226,
-              "Eine Helligkeitsregelung hat dieses Gerät nicht:");
-    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 430, 248,
-              "die Beleuchtung kennt nur an und aus.");
+    makeWrappedLabel(page, &ui_font_18, kTextMuted, 430, 196, 300,
+                     "In dieser Zeit gilt die Nacht-Abschaltzeit.");
+    makeWrappedLabel(page, &ui_font_18, kTextMuted, 430, 226, 300,
+                     "Eine Helligkeitsregelung hat dieses Gerät nicht: "
+                     "Die Beleuchtung kennt nur an und aus.");
     return page;
 }
 

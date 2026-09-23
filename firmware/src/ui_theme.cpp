@@ -88,6 +88,19 @@ lv_obj_t *makeLabel(lv_obj_t *parent, const lv_font_t *font, uint32_t color,
     return label;
 }
 
+lv_obj_t *makeWrappedLabel(lv_obj_t *parent, const lv_font_t *font, uint32_t color,
+                           lv_coord_t x, lv_coord_t y, lv_coord_t width,
+                           const char *text) {
+    lv_obj_t *label = lv_label_create(parent);
+    lv_obj_set_style_text_font(label, font, 0);
+    lv_obj_set_style_text_color(label, lv_color_hex(color), 0);
+    lv_obj_set_pos(label, x, y);
+    lv_obj_set_width(label, width);
+    lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+    lv_label_set_text(label, text);
+    return label;
+}
+
 lv_obj_t *makeButton(lv_obj_t *parent, const char *text, lv_event_cb_t handler,
                      lv_coord_t w, lv_coord_t h,
                      lv_align_t align, lv_coord_t x, lv_coord_t y,
