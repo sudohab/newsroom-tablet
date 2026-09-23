@@ -1007,3 +1007,18 @@ jeweils rund sechs Minuten). Vermutlich die Erzeugung der eingebetteten
 Zertifikate (`scripts/generate_embeds.py`) gegen den noch nicht
 neuaufgebauten Abhängigkeitsbaum. Noch nicht untersucht – wer hier Zeit
 verliert: einfach ein zweites Mal bauen.
+
+### 2026-09-23 — Anrufbanner: Schrift nach Anlass
+
+Im Aufblendfenster stand beides in der größten Schrift (56). Beim Timer ist
+das richtig — dort steht ein kurzes Wort. Bei einem Anruf steht dort ein
+**Name**, und in dieser Größe passte kaum der Vorname ins Feld.
+
+Die Schrift richtet sich jetzt nach dem Anlass: **Timer groß und einzeilig,
+Anruf mittel (30) und zweizeilig.** Die Höhe des Feldes bleibt gleich (76 px),
+nur die Schrift wechselt — so bleibt das Fenster in beiden Fällen gleich
+gebaut. `LV_LABEL_LONG_DOT` bricht innerhalb dieser Höhe um und setzt erst
+danach Punkte, schneidet also nicht mitten im Namen ab.
+
+*Nach dem Pi-Update geprüft:* keine Fehlermeldung mehr über die serielle
+Schnittstelle, 49 °C, Speicher stabil.

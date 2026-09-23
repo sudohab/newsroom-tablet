@@ -71,10 +71,17 @@ String clockText(int seconds) {
 }
 
 void show(Kind kind, const char *caption, const String &main, const String &detail,
-          uint32_t color, const char *buttonText) {
+          uint32_t color, const char *buttonText, const lv_font_t *font) {
     lv_obj_set_style_border_color(box, lv_color_hex(color), 0);
     lv_obj_set_style_text_color(labelKind, lv_color_hex(color), 0);
     lv_label_set_text(labelKind, caption);
+
+    // Die Schriftgröße richtet sich nach dem Anlass. Beim Timer steht dort ein
+    // kurzes Wort, das darf groß sein. Bei einem Anruf steht dort ein Name,
+    // und der soll LESBAR sein, nicht groß: In der großen Schrift passte
+    // „Anruf von …" kaum bis zum Vornamen. Deshalb kleiner und zweizeilig --
+    // die Höhe des Feldes bleibt gleich, nur die Schrift wechselt.
+    lv_obj_set_style_text_font(labelMain, font, 0);
     lv_label_set_text(labelMain, main.c_str());
     lv_label_set_text(labelDetail, detail.c_str());
 
@@ -109,15 +116,18 @@ void begin(lv_obj_t *screen) {
     lv_obj_set_style_text_font(labelMain, &ui_font_56, 0);
     lv_obj_set_style_text_color(labelMain, lv_color_hex(kText), 0);
     lv_obj_set_pos(labelMain, 0, 28);
-    lv_obj_set_size(labelMain, kWidth - 48, 64);
+    // Platz für zwei Zeilen der mittleren Schrift bzw. eine der großen.
+    // LV_LABEL_LONG_DOT bricht innerhalb dieser Höhe um und setzt danach
+    // Punkte -- es schneidet also nicht mitten im Namen ab.
+    lv_obj_set_size(labelMain, kWidth - 48, 76);
     lv_label_set_long_mode(labelMain, LV_LABEL_LONG_DOT);
     lv_label_set_text(labelMain, "");
 
     labelDetail = lv_label_create(box);
     lv_obj_set_style_text_font(labelDetail, &ui_font_22, 0);
     lv_obj_set_style_text_color(labelDetail, lv_color_hex(kTextMuted), 0);
-    lv_obj_set_pos(labelDetail, 0, 100);
-    lv_obj_set_size(labelDetail, kWidth - 48, 56);
+    lv_obj_set_pos(labelDetail, 0, 112);
+    lv_obj_set_size(labelDetail, kWidth - 48, 44);
     lv_label_set_long_mode(labelDetail, LV_LABEL_LONG_DOT);
     lv_label_set_text(labelDetail, "");
 
@@ -137,7 +147,9 @@ void update() {
     // nicht.
     if (!state.callText.isEmpty() && state.callText != dismissedCall) {
         if (shown != Kind::Call) {
-            show(Kind::Call, "ANRUF", state.callText, "", kCall, "Weg");
+            // Mittlere Schrift, zwei Zeilen: Ein Anrufername ist länger als
+            // ein Wort, und ihn zu sehen ist der ganze Zweck.
+            show(Kind::Call, "ANRUF", state.callText, "", kCall, "Weg", &ui_font_30);
         }
         return;
     }
@@ -151,7 +163,7 @@ void update() {
             }
             show(Kind::Timer, "TIMER ABGELAUFEN",
                  state.timerLabel.isEmpty() ? String("Fertig") : state.timerLabel,
-                 detail, kAlarm, "Aus");
+                 detail, kAlarm, "Aus", &ui_font_56);
         }
         return;
     }
