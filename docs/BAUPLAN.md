@@ -909,3 +909,51 @@ stehen dreifach: im Gerät, im Schema des Servers und im Modul.
 
 *Serverseite im Repo newsroom21, Commit `0f32e2b`. Noch nicht am Gerät
 erprobt — der Pi braucht erst das Update.*
+
+### 2026-09-23 — Menüreihenfolge: „Start" in die Mitte
+
+Auf Wunsch von Hannes steht „Start" nicht mehr am Anfang der Leiste, sondern
+in der **Mitte**. Beim Einschalten rastet die Leiste dort ein; von dort geht es
+nach links wie nach rechts.
+
+    Timer · [Uhren] · Warnungen · News · ► START ◄ · Wetter · Termine ·
+    Anrufe · Radio · Podcast · Wecker · WLAN · Geraet
+
+Links liegt, was man im Vorbeigehen braucht, rechts das Nachschlagen und das
+Einstellbare. Der Platz für „Uhren" (Nachrichten an die Matrix-Uhren,
+Etappe 16) ist als Kommentar schon eingetragen.
+
+Zentriert wird nicht von Hand: Die Leiste stand schon auf
+`LV_SCROLL_SNAP_CENTER`, also genügt `lv_obj_scroll_to_view()`. Zwei Dinge
+waren nötig:
+
+* **`lv_obj_update_layout(screen)` vor dem ersten `showPage()`** – vorher
+  stehen alle Knöpfe noch auf Position null, und es gibt nichts zu zentrieren.
+* **Beim ersten Mal ohne Laufbewegung** (`LV_ANIM_OFF`), sonst wandert die
+  Leiste beim Einschalten sichtbar an ihren Platz. Erkannt an `activePage < 0`.
+
+Die Startseite wird über `ui_pages::homeIndex()` gesucht statt fest
+eingetragen – wer eine Seite einfügt, muss also nichts nachziehen.
+
+⚠ Dabei aufgefallen: `pageObjects[]` und `navButtons[]` in `ui.cpp` waren auf
+**12** festgelegt – genau die Zahl der Seiten nach der Timer-Seite. Die
+nächste Seite wäre stillschweigend hinten herausgefallen und hätte einen
+Speicherfehler ausgelöst. Jetzt `kMaxPages = 16` plus eine Meldung über die
+serielle Schnittstelle, falls es doch einmal zu eng wird.
+
+### 2026-09-23 — Zwei Meldungen, die dasselbe bedeuten
+
+Am Gerät kamen „Server meldet 404" (beim Abrufen der Timer) und „Server meldet
+400: Ungültige Eingabe: action, repeat, seconds" (beim Anlegen). Beides heißt:
+**Der Pi hat das Update noch nicht** – er kennt weder den Endpunkt noch die
+Aktionen in seiner Prüfliste.
+
+Die Timer-Seite sagt das jetzt im Klartext („Pi kennt die Timer noch nicht –
+Update einspielen") und fragt danach nur noch **jede Minute** statt alle zehn
+Sekunden nach. Ein echter Eingabefehler kann hinter der 400 nicht stecken:
+Dauer und Kennung prüft das Gerät vorher selbst.
+
+*Gemessen, während das Gerät im 404-Zustand lief:* Speicher konstant bei
+47 251 Byte über drei Minuten, 53 °C, keine Neustarts. **Kein Speicherverlust.**
+Und weil eine 404 eine gültige HTTP-Antwort ist, bleibt die TLS-Verbindung
+bestehen – das vergebliche Anklopfen kostete also auch keinen Handschlag.

@@ -38,6 +38,10 @@ struct Page {
 const Page *all();
 int count();
 
+// Die Nummer der Startseite. Sie steht bewusst in der Mitte der Leiste,
+// deshalb wird sie gesucht statt fest eingetragen.
+int homeIndex();
+
 // --- Die einzelnen Seiten ---------------------------------------------------
 namespace home {
 lv_obj_t *create(lv_obj_t *parent);

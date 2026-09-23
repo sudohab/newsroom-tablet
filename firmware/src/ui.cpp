@@ -36,10 +36,15 @@ lv_obj_t *labelAlarm = nullptr;
 lv_obj_t *labelWeather = nullptr;
 lv_obj_t *labelWeatherDetail = nullptr;
 
-// Seiten: Container und Menüknöpfe, gleiche Reihenfolge wie ui_pages::all()
-lv_obj_t *pageObjects[12] = {};
-lv_obj_t *navButtons[12] = {};
-int activePage = 0;
+// Seiten: Container und Menüknöpfe, gleiche Reihenfolge wie ui_pages::all().
+// Reichlich bemessen, damit eine neue Seite nicht stillschweigend hinten
+// herausfällt; `begin()` prüft es zusätzlich.
+constexpr int kMaxPages = 16;
+lv_obj_t *pageObjects[kMaxPages] = {};
+lv_obj_t *navButtons[kMaxPages] = {};
+// -1 = es ist noch keine Seite offen. Daran erkennt `showPage`, dass es die
+// erste ist – die soll ohne Laufbewegung in der Mitte stehen.
+int activePage = -1;
 // Seitenwechsel passieren im LVGL-Rückruf; die Seite darf aber erst aus der
 // Hauptschleife heraus Daten holen. Deshalb nur vormerken.
 volatile int pendingActivate = -1;
@@ -132,12 +137,15 @@ void showPage(int index) {
                                       lv_color_hex(i == index ? kAccent : kSurface), 0);
         }
     }
+    const bool first = (activePage < 0);
     activePage = index;
     pendingActivate = index;
 
-    // Den Knopf der offenen Seite in den sichtbaren Bereich schieben.
+    // Den Knopf der offenen Seite mittig in die Leiste schieben. Das
+    // Zentrieren macht LVGL von selbst, weil die Leiste auf
+    // LV_SCROLL_SNAP_CENTER steht.
     if (navButtons[index] != nullptr) {
-        lv_obj_scroll_to_view(navButtons[index], LV_ANIM_ON);
+        lv_obj_scroll_to_view(navButtons[index], first ? LV_ANIM_OFF : LV_ANIM_ON);
     }
 }
 
@@ -165,7 +173,7 @@ void buildNav() {
     lv_obj_set_scroll_snap_x(navBar, LV_SCROLL_SNAP_CENTER);
     lv_obj_set_scrollbar_mode(navBar, LV_SCROLLBAR_MODE_OFF);
 
-    for (int i = 0; i < ui_pages::count(); ++i) {
+    for (int i = 0; i < min(ui_pages::count(), kMaxPages); ++i) {
         lv_obj_t *btn = lv_btn_create(navBar);
         lv_obj_set_size(btn, LV_SIZE_CONTENT, 44);
         lv_obj_set_style_bg_color(btn, lv_color_hex(kSurface), 0);
@@ -201,13 +209,22 @@ void begin() {
     // Inhaltsbereich: Hier liegen alle Seiten übereinander, sichtbar ist eine.
     content = makeSection(screen, kMargin, kContentTop, 800 - 2 * kMargin, kContentHeight);
 
-    for (int i = 0; i < ui_pages::count(); ++i) {
+    // Lieber hier laut sein als eine Seite stillschweigend verlieren.
+    const int pages = min(ui_pages::count(), kMaxPages);
+    if (ui_pages::count() > kMaxPages) {
+        Serial.printf("[ui] %d Seiten, aber nur %d Plaetze - kMaxPages erhoehen!\n",
+                      ui_pages::count(), kMaxPages);
+    }
+    for (int i = 0; i < pages; ++i) {
         pageObjects[i] = ui_pages::all()[i].create(content);
         if (pageObjects[i] != nullptr) lv_obj_add_flag(pageObjects[i], LV_OBJ_FLAG_HIDDEN);
     }
 
     buildNav();
-    showPage(0);
+    // Die Leiste muss ihre endgültigen Maße kennen, bevor mittig gescrollt
+    // werden kann – sonst stehen alle Knöpfe noch übereinander auf Null.
+    lv_obj_update_layout(screen);
+    showPage(ui_pages::homeIndex());
     updateClock();
     updateHeaderState();
 

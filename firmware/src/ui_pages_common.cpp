@@ -7,25 +7,41 @@ namespace ui_pages {
 
 using namespace ui_theme;
 
-// Reihenfolge der Seiten in der Menüleiste. Start zuerst, danach die
-// Anzeigeseiten, zuletzt das Einstellbare – so liegt das Alltägliche vorn.
+// Reihenfolge der Seiten in der Menüleiste.
+//
+// „Start" steht in der MITTE, nicht am Anfang: Beim Einschalten rastet die
+// Leiste auf dieser Seite ein, und von dort geht es nach links wie nach
+// rechts. Links davon liegt, was man im Vorbeigehen braucht (Timer,
+// Nachrichten an die Uhren, Warnungen, Schlagzeilen), rechts davon das
+// Nachschlagen und das Einstellbare.
+//
+// Wer hier etwas einfügt, muss nichts weiter tun: `homeIndex()` sucht die
+// Startseite selbst.
 const Page kPages[] = {
+    {"Timer",    timers::create,   timers::activate,   timers::work},
+    // Hier kommt später „Uhren" hin (Nachrichten an die Matrix-Uhren).
+    {"Warnungen", warnings::create, warnings::activate, warnings::work},
+    {"News",     news::create,     news::activate,     news::work},
     {"Start",    home::create,     home::activate,     home::work},
     {"Wetter",   weather::create,  weather::activate,  weather::work},
     {"Termine",  calendar::create, calendar::activate, calendar::work},
-    {"News",     news::create,     news::activate,     news::work},
-    {"Warnungen", warnings::create, warnings::activate, warnings::work},
     {"Anrufe",   calls::create,    calls::activate,    calls::work},
     {"Radio",    radio::create,    radio::activate,    radio::work},
     {"Podcast",  podcasts::create, podcasts::activate, podcasts::work},
     {"Wecker",   alarms::create,   alarms::activate,   alarms::work},
-    {"Timer",    timers::create,   timers::activate,   timers::work},
     {"WLAN",     wifi::create,     wifi::activate,     wifi::work},
     {"Geraet",   settings::create, settings::activate, settings::work},
 };
 
 const Page *all() { return kPages; }
 int count() { return sizeof(kPages) / sizeof(kPages[0]); }
+
+int homeIndex() {
+    for (int i = 0; i < count(); ++i) {
+        if (kPages[i].create == home::create) return i;
+    }
+    return 0;
+}
 
 lv_obj_t *makeTitle(lv_obj_t *parent, const char *text) {
     return makeLabel(parent, &ui_font_30, kText, LV_ALIGN_TOP_LEFT, 0, 0, text);

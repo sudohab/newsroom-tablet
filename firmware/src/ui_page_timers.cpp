@@ -43,6 +43,9 @@ constexpr lv_coord_t kHalfWidth = (kSlotWidth - kGap) / 2;
 
 // Alle zehn Sekunden beim Pi nachfragen. Dazwischen zählt das Gerät selbst.
 constexpr uint32_t kRefreshMs = 10000;
+// Antwortet der Pi gar nicht wie erwartet (z. B. weil das Update noch fehlt),
+// dann nicht weiter alle zehn Sekunden anklopfen.
+constexpr uint32_t kRetryMs = 60000;
 
 enum class Job { None, Load, Create, Start, Pause, Stop, Delete, Repeat };
 volatile Job job = Job::None;
@@ -74,6 +77,7 @@ int pending[kSlots] = {0, 0, 0, 0};
 
 int jobSlot = -1;
 uint32_t lastFetchMs = 0;
+uint32_t refreshMs = kRefreshMs;
 uint32_t lastCountMs = 0;
 bool loaded = false;
 
@@ -329,7 +333,7 @@ void work() {
 
     // Regelmäßig nachziehen: Ein Timer kann auch von der Weboberfläche aus
     // gestellt worden sein, und beim Ablaufen wechselt der Zustand im Pi.
-    if (job == Job::None && loaded && now - lastFetchMs >= kRefreshMs) {
+    if (job == Job::None && loaded && now - lastFetchMs >= refreshMs) {
         job = Job::Load;
     }
 
@@ -381,6 +385,21 @@ void work() {
     if (current == Job::Load || message.isEmpty()) {
         loaded = true;
         lastFetchMs = millis();
+    }
+    // Zwei Meldungen bedeuten dasselbe: Der Pi kennt die Timer noch nicht.
+    //
+    //   • „404" beim Abrufen  – den Endpunkt gibt es dort nicht.
+    //   • „400" beim Schicken – seine Prüfliste kennt die Timer-Aktionen
+    //     nicht und weist Aktion und Felder ab. Ein echter Eingabefehler
+    //     kann es nicht sein: Dauer und Kennung prüft das Gerät vorher selbst.
+    //
+    // Das ist kein Fehler des Geräts, sondern ein fehlendes Update – also
+    // sagen wir es so, und klopfen danach seltener an.
+    if (message.startsWith("Server meldet 404") || message.startsWith("Server meldet 400")) {
+        message = "Pi kennt die Timer noch nicht – Update einspielen";
+        refreshMs = kRetryMs;
+    } else if (message.isEmpty()) {
+        refreshMs = kRefreshMs;
     }
 
     lvgl_port_lock(-1);
