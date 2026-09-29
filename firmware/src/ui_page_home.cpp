@@ -36,6 +36,13 @@ constexpr lv_coord_t kLeftHeight = 280;
 constexpr lv_coord_t kDivider = kLeftHeight / 2;    // 140
 constexpr uint32_t kHeadlineIntervalMs = 120000;   // zwei Minuten
 constexpr uint32_t kNewsRefreshMs = 600000;        // Liste alle zehn Minuten neu
+// Ohne Schlagzeilen (Pi nicht erreichbar, Abruf abgewiesen, Liste leer) erst
+// nach einer halben Minute wieder fragen. Vorher stand hier „leer -> sofort
+// nochmal“: Nach einem Fehlschlag fragte das Tablet in jedem Durchlauf der
+// Hauptschleife, rund 30-mal je Sekunde. Caddy wies das als Überlast ab (429),
+// womit die Liste leer blieb – eine Schleife, die sich selbst am Laufen hielt
+// und den Bild-Kern mit TLS beschäftigte (gefunden 28.09.2026 im Caddy-Log).
+constexpr uint32_t kNewsRetryMs = 30000;
 
 lv_obj_t *page = nullptr;
 lv_obj_t *labelEventWhen = nullptr;
@@ -193,8 +200,8 @@ void work() {
     const uint32_t now = millis();
 
     // Termine und Nachrichten selten holen – sie ändern sich langsam.
-    const bool fetchNews = needsRefresh || headlines.empty()
-                        || now - lastNewsFetchMs > kNewsRefreshMs;
+    const uint32_t newsInterval = headlines.empty() ? kNewsRetryMs : kNewsRefreshMs;
+    const bool fetchNews = needsRefresh || now - lastNewsFetchMs > newsInterval;
     const bool fetchCalendar = needsRefresh || now - lastCalendarFetchMs > kNewsRefreshMs;
     needsRefresh = false;
 
