@@ -9,3 +9,6 @@ backup/
 # Editor
 .vscode/
 *.swp
+
+# Wird beim Bau der Testumgebung "paneltest" erzeugt
+firmware/sdkconfig.paneltest
