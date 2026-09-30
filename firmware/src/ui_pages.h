@@ -115,6 +115,12 @@ void activate();
 void work();
 }  // namespace timers
 
+namespace printers {
+lv_obj_t *create(lv_obj_t *parent);
+void activate();
+void work();
+}  // namespace printers
+
 namespace wifi {
 lv_obj_t *create(lv_obj_t *parent);
 void activate();

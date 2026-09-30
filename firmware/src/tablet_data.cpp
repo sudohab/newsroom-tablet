@@ -529,4 +529,78 @@ String sendClockText(const String &clockId, const String &text) {
     return sendClockCommand(clockId, "\"text\":" + jsonString(trimmed));
 }
 
+// --- Drucker ------------------------------------------------------------------
+
+namespace {
+// "#00FFFF" -> 0x00ffff; alles andere -> grau
+uint32_t parseColor(const String &text) {
+    if (text.length() != 7 || text[0] != '#') return 0x8e8e93;
+    for (size_t i = 1; i < 7; ++i) {
+        if (!isHexadecimalDigit(text[i])) return 0x8e8e93;
+    }
+    return strtoul(text.c_str() + 1, nullptr, 16);
+}
+
+int number(JsonVariantConst value, int low, int high) {
+    if (!value.is<int>()) return -1;
+    const int n = value.as<int>();
+    return n < low || n > high ? -1 : n;
+}
+}  // namespace
+
+String fetchPrinters(Printer3d &printer3d, OfficePrinter &office) {
+    printer3d = Printer3d();
+    office = OfficePrinter();
+    JsonDocument filter;
+    for (const char *key : {"name", "state", "file", "progress", "remaining"}) {
+        filter["printer3d"][key] = true;
+    }
+    filter["printer3d"]["nozzle"] = true;
+    filter["printer3d"]["bed"] = true;
+    filter["office"]["name"] = true;
+    filter["office"]["state"] = true;
+    filter["office"]["reasons"] = true;
+    filter["office"]["inks"][0]["name"] = true;
+    filter["office"]["inks"][0]["color"] = true;
+    filter["office"]["inks"][0]["level"] = true;
+
+    struct Out { Printer3d *p; OfficePrinter *o; } out{&printer3d, &office};
+    return fetchList("/api/tablet/printers", "Drucker nicht abrufbar", filter,
+                     [](JsonDocument &doc, void *raw) {
+        auto *o = static_cast<Out *>(raw);
+        JsonObjectConst p = doc["printer3d"];
+        if (!p.isNull()) {
+            o->p->present = true;
+            o->p->name = take(p["name"], 40);
+            o->p->state = take(p["state"], 16);
+            o->p->file = take(p["file"], 40);
+            o->p->progress = number(p["progress"], 0, 100);
+            o->p->remaining = number(p["remaining"], 0, 30 * 24 * 3600);
+            o->p->nozzle = number(p["nozzle"]["actual"], 0, 500);
+            o->p->nozzleTarget = number(p["nozzle"]["target"], 0, 500);
+            o->p->bed = number(p["bed"]["actual"], 0, 500);
+            o->p->bedTarget = number(p["bed"]["target"], 0, 500);
+        }
+        JsonObjectConst office = doc["office"];
+        if (!office.isNull()) {
+            o->o->present = true;
+            o->o->name = take(office["name"], 40);
+            o->o->state = take(office["state"], 16);
+            for (JsonVariantConst reason : office["reasons"].as<JsonArrayConst>()) {
+                const String text = take(reason, 40);
+                if (!text.isEmpty()) o->o->reasons.push_back(text);
+                if (o->o->reasons.size() >= 4) break;
+            }
+            for (JsonObjectConst entry : office["inks"].as<JsonArrayConst>()) {
+                Ink ink;
+                ink.name = take(entry["name"], 20);
+                ink.color = parseColor(take(entry["color"], 7));
+                ink.level = number(entry["level"], 0, 100);
+                o->o->inks.push_back(ink);
+                if (o->o->inks.size() >= 4) break;
+            }
+        }
+    }, &out);
+}
+
 }  // namespace tablet_data

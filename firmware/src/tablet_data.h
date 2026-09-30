@@ -166,4 +166,34 @@ String sendPreset(const String &clockId, int presetIndex);
 // Einen frei getippten Text schicken.
 String sendClockText(const String &clockId, const String &text);
 
+// --- Drucker ------------------------------------------------------------------
+// 3D-Drucker (Moonraker) und Bürodrucker (IPP) – newsroom21 fragt beide ab,
+// das Tablet holt nur das Ergebnis. Nicht eingerichtet = present false.
+struct Printer3d {
+    bool present = false;
+    String name;
+    String state;        // offline, standby, printing, paused, complete, cancelled, error
+    String file;
+    int progress = -1;   // Prozent
+    int remaining = -1;  // Sekunden
+    int nozzle = -1, nozzleTarget = -1;
+    int bed = -1, bedTarget = -1;
+};
+
+struct Ink {
+    String name;
+    uint32_t color = 0x8e8e93;
+    int level = -1;      // Prozent, -1 = unbekannt
+};
+
+struct OfficePrinter {
+    bool present = false;
+    String name;
+    String state;        // offline, idle, processing, stopped
+    std::vector<String> reasons;
+    std::vector<Ink> inks;
+};
+
+String fetchPrinters(Printer3d &printer3d, OfficePrinter &office);
+
 }  // namespace tablet_data

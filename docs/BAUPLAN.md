@@ -1136,3 +1136,13 @@ Moonraker ab): Während eines Drucks zeigt das mittlere Feld der Startseite
 „3D-DRUCK · 47 % · noch 1:23 h" statt des Radios. Ist er fertig, kommt ein
 Aufblendfenster wie bei der Waschmaschine; „Erledigt" schickt `printer_ack`.
 Vorrang: Anruf, Timer, Waschmaschine, Drucker.
+
+### 2026-10-01 — 0.3.1: Seite „Drucker"
+
+Neue Seite in der Menüleiste nach „Anrufe" (`src/ui_page_printers.cpp`,
+Daten über `GET /api/tablet/printers`, alle zehn Sekunden, solange die Seite
+offen ist). Links der 3D-Drucker (Zustand, Datei, Fortschrittsbalken,
+Restzeit, Düse/Bett), rechts der Bürodrucker HP OfficeJet Pro 8730 per IPP
+(Zustand, Meldungen wie „Papier leer" in Rot, vier Tintenbalken in der
+Patronenfarbe; Schwarz als helles Grau, sonst unsichtbar auf schwarzem
+Grund; ≤ 10 % rot). Nicht eingerichtete Drucker zeigen einen Hinweis.
