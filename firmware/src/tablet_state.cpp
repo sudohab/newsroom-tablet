@@ -82,6 +82,11 @@ JsonDocument makeFilter() {
     filter["command"] = true;
     filter["washer"]["state"] = true;
     filter["washer"]["name"] = true;
+    filter["printer"]["state"] = true;
+    filter["printer"]["name"] = true;
+    filter["printer"]["file"] = true;
+    filter["printer"]["progress"] = true;
+    filter["printer"]["remaining"] = true;
     filter["firmware"] = true;
     return filter;
 }
@@ -177,6 +182,13 @@ void parse(const String &body) {
     next.washerDone = !washer.isNull() && take(washer["state"], 16) == "done";
     next.washerName = take(washer["name"], 40);
 
+    JsonObjectConst printer = doc["printer"];
+    next.printerState = take(printer["state"], 16);
+    next.printerName = take(printer["name"], 40);
+    next.printerFile = take(printer["file"], 40);
+    next.printerProgress = constrain(printer["progress"] | -1, -1, 100);
+    next.printerRemaining = constrain(printer["remaining"] | -1, -1, 30 * 24 * 3600);
+
     // Nach „Installieren“ in der Weboberfläche: das Manifest. Geprüft wird
     // es erst in ota::handleOffer (Modell, Build-Nummer, Signatur).
     JsonObjectConst firmware = doc["firmware"];
@@ -213,7 +225,10 @@ void parse(const String &body) {
         && next.commandId == snapshot.commandId
         && next.timerExpired == snapshot.timerExpired
         && next.timerId == snapshot.timerId
-        && next.washerDone == snapshot.washerDone;
+        && next.washerDone == snapshot.washerDone
+        && next.printerState == snapshot.printerState
+        && next.printerProgress == snapshot.printerProgress
+        && next.printerRemaining / 60 == snapshot.printerRemaining / 60;
 
     // Die Listen getrennt vergleichen: Sie kosten beim Neuaufbau am meisten.
     const bool sameEvents = sameList<Snapshot::Event>(

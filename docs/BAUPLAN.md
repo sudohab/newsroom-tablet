@@ -1119,3 +1119,20 @@ sehen im Tab Updates.
 „Erledigt“ (Aktion `washer_ack`).
 
 Firmware 0.2.0 (Build 2026093001) – einmal per USB aufzuspielen.
+
+### 2026-09-30 — 0.3.0: Schrift mit Sonderzeichen, 3D-Drucker
+
+**Hochkante Rechtecke** (Hannes: „meist zwischen Nachrichten oder auf der
+WLAN-Seite nach Netz:"): So zeichnet LVGL ein Zeichen, das in der Schrift
+fehlt. Die Schriften enthielten nur ASCII und Latin-1 (bis ÿ) – es fehlten
+„–" (auch in „Netz: –"), „…", die deutschen Anführungszeichen „ " und alles
+aus Namen wie Łódź oder Erdoğan. `scripts/build_fonts.sh` nimmt jetzt
+Latin Extended-A, Striche, Anführungszeichen, …, €, ‰, ‹ › und ™ mit; die
+große Schrift (56 px) nur das Nötigste. Was darüber hinaus in Nachrichten
+steht (Emoji, andere Schriften), erscheint weiter als Rechteck.
+
+**3D-Drucker** (Anycubic Kobra 2 Pro mit Rinkhals, newsroom21 fragt
+Moonraker ab): Während eines Drucks zeigt das mittlere Feld der Startseite
+„3D-DRUCK · 47 % · noch 1:23 h" statt des Radios. Ist er fertig, kommt ein
+Aufblendfenster wie bei der Waschmaschine; „Erledigt" schickt `printer_ack`.
+Vorrang: Anruf, Timer, Waschmaschine, Drucker.

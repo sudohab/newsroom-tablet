@@ -12,6 +12,7 @@
 //   links oben   nächster Termin (nur einer)
 //   links unten  eine Schlagzeile, Wechsel alle zwei Minuten
 //   rechts       drei Felder: verpasste Anrufe · laufender Sender · Warnungen
+//                (während eines 3D-Drucks zeigt das mittlere Feld den Drucker)
 //
 // Die Schlagzeilen wechseln **reihum über die Quellen** – der Pi liefert sie
 // bereits in dieser Reihenfolge (siehe /api/tablet/news), das Gerät geht die
@@ -52,6 +53,7 @@ lv_obj_t *labelNewsSource = nullptr;
 lv_obj_t *labelNewsTitle = nullptr;
 lv_obj_t *labelCalls = nullptr;
 lv_obj_t *labelRadio = nullptr;
+lv_obj_t *captionRadio = nullptr;
 lv_obj_t *labelWarning = nullptr;
 
 std::vector<tablet_data::Event> events;
@@ -63,8 +65,11 @@ uint32_t lastCalendarFetchMs = 0;
 bool needsRefresh = true;
 
 // Ein Feld auf der rechten Seite: Überschrift klein, Inhalt groß.
-lv_obj_t *makeTile(lv_obj_t *parent, lv_coord_t y, const char *caption, const char *initial) {
-    makeLabel(parent, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, kTileLeft, y, caption);
+lv_obj_t *makeTile(lv_obj_t *parent, lv_coord_t y, const char *caption, const char *initial,
+                   lv_obj_t **captionOut = nullptr) {
+    lv_obj_t *captionLabel =
+        makeLabel(parent, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, kTileLeft, y, caption);
+    if (captionOut != nullptr) *captionOut = captionLabel;
     lv_obj_t *value = lv_label_create(parent);
     lv_obj_set_style_text_font(value, &ui_font_22, 0);
     lv_obj_set_style_text_color(value, lv_color_hex(kText), 0);
@@ -113,12 +118,35 @@ void showTiles() {
     lv_obj_set_style_text_color(labelCalls,
                                 lv_color_hex(state.missedCallCount > 0 ? kAccent : kTextMuted), 0);
 
-    const bool radioPlaying = state.mediaState == "playing" && state.mediaKind == "radio";
-    lv_label_set_text(labelRadio, radioPlaying && !state.mediaTitle.isEmpty()
-                                      ? state.mediaTitle.c_str()
-                                      : "kein Radiosender");
-    lv_obj_set_style_text_color(labelRadio,
-                                lv_color_hex(radioPlaying ? kText : kTextMuted), 0);
+    // Während eines 3D-Drucks gehört das mittlere Feld dem Drucker: Das Radio
+    // hat eine eigene Seite, den Druckfortschritt sieht man sonst nirgends.
+    const bool printing = state.printerState == "printing" || state.printerState == "paused";
+    if (printing) {
+        lv_label_set_text(captionRadio, state.printerState == "paused" ? "3D-DRUCK (PAUSE)"
+                                                                        : "3D-DRUCK");
+        String text = state.printerProgress >= 0 ? String(state.printerProgress) + " %"
+                                                 : String("läuft");
+        if (state.printerRemaining >= 0) {
+            const int minutes = (state.printerRemaining + 59) / 60;
+            char rest[24];
+            if (minutes >= 60) {
+                snprintf(rest, sizeof(rest), "  ·  noch %d:%02d h", minutes / 60, minutes % 60);
+            } else {
+                snprintf(rest, sizeof(rest), "  ·  noch %d min", minutes);
+            }
+            text += rest;
+        }
+        lv_label_set_text(labelRadio, text.c_str());
+        lv_obj_set_style_text_color(labelRadio, lv_color_hex(kAccent), 0);
+    } else {
+        lv_label_set_text(captionRadio, "RADIO");
+        const bool radioPlaying = state.mediaState == "playing" && state.mediaKind == "radio";
+        lv_label_set_text(labelRadio, radioPlaying && !state.mediaTitle.isEmpty()
+                                          ? state.mediaTitle.c_str()
+                                          : "kein Radiosender");
+        lv_obj_set_style_text_color(labelRadio,
+                                    lv_color_hex(radioPlaying ? kText : kTextMuted), 0);
+    }
 
     if (state.warningCount == 0) {
         lv_label_set_text(labelWarning, "alles ruhig");
@@ -183,7 +211,7 @@ lv_obj_t *create(lv_obj_t *parent) {
 
     labelCalls = makeTile(page, 0, "VERPASSTE ANRUFE", "…");
     makeSeparator(page, kTileLeft, 86, kTileWidth, 1);
-    labelRadio = makeTile(page, 100, "RADIO", "…");
+    labelRadio = makeTile(page, 100, "RADIO", "…", &captionRadio);
     makeSeparator(page, kTileLeft, 186, kTileWidth, 1);
     labelWarning = makeTile(page, 200, "WARNUNGEN", "…");
 

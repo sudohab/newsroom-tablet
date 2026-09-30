@@ -81,6 +81,14 @@ struct Snapshot {
     // Waschmaschine fertig (nur solange sie nicht als erledigt markiert ist)
     bool washerDone = false;
     String washerName;
+
+    // 3D-Drucker: nur während eines Drucks oder solange „fertig" wartet
+    // (sonst printerState leer).
+    String printerState;          // "printing", "paused", "complete"
+    String printerName;
+    String printerFile;
+    int printerProgress = -1;     // Prozent, -1 = unbekannt
+    int printerRemaining = -1;    // Sekunden, -1 = unbekannt
 };
 
 // Einmal beim Start aufrufen.

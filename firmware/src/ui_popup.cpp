@@ -19,7 +19,7 @@ using namespace ui_theme;
 constexpr lv_coord_t kWidth = 560;
 constexpr lv_coord_t kHeight = 260;
 
-enum class Kind { None, Call, Timer, Washer };
+enum class Kind { None, Call, Timer, Washer, Printer };
 Kind shown = Kind::None;
 
 lv_obj_t *box = nullptr;
@@ -33,6 +33,7 @@ String shownTimerId;
 String pendingStopId;
 volatile bool stopRequested = false;
 volatile bool washerAckRequested = false;
+volatile bool printerAckRequested = false;
 
 // Ein Anruf wird nur angezeigt, nicht bedient: Das Display hat kein Mikrofon,
 // und den Hörer nimmt man am Telefon ab. Deshalb hat dieses Fenster nur einen
@@ -50,6 +51,11 @@ void onOff(lv_event_t *) {
         // „Erledigt“: Der Pi setzt die Maschine zurück; das Fenster geht zu,
         // sobald die nächste Zustandsabfrage das bestätigt.
         washerAckRequested = true;
+        lv_label_set_text(labelDetail, "Wird bestätigt …");
+        return;
+    }
+    if (shown == Kind::Printer) {
+        printerAckRequested = true;
         lv_label_set_text(labelDetail, "Wird bestätigt …");
         return;
     }
@@ -186,11 +192,31 @@ void update() {
         return;
     }
 
+    // 3D-Druck fertig: wie die Waschmaschine – hat Zeit.
+    if (state.printerState == "complete") {
+        if (shown != Kind::Printer) {
+            show(Kind::Printer, "3D-DRUCKER",
+                 (state.printerName.isEmpty() ? String("Druck") : state.printerName) + " fertig",
+                 state.printerFile.isEmpty() ? String("Der Druck kann raus.") : state.printerFile,
+                 kCall, "Erledigt", &ui_font_30);
+        }
+        return;
+    }
+
     // Kein Anlass mehr – der Pi hat bestätigt, dass nichts mehr klingelt.
     if (shown != Kind::None) hide();
 }
 
 void work() {
+    if (printerAckRequested) {
+        printerAckRequested = false;
+        const String error = tablet_state::sendAction("{\"action\":\"printer_ack\"}");
+        if (!error.isEmpty()) {
+            lvgl_port_lock(-1);
+            lv_label_set_text(labelDetail, error.c_str());
+            lvgl_port_unlock();
+        }
+    }
     if (washerAckRequested) {
         washerAckRequested = false;
         const String error = tablet_state::sendAction("{\"action\":\"washer_ack\"}");
