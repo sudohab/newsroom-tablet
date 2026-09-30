@@ -2,7 +2,7 @@
 //
 // Manche Dinge dulden keinen Seitenwechsel: Wenn das Telefon klingelt oder
 // ein Timer abläuft, soll das Display es zeigen – gleich, welche Seite gerade
-// offen ist. Deshalb hängt dieses Fenster nicht an einer Seite, sondern
+// offen ist. Dazu kommt „Waschmaschine fertig“ mit dem Knopf „Erledigt“. Deshalb hängt dieses Fenster nicht an einer Seite, sondern
 // direkt am Bildschirm, und liegt über allem.
 //
 // Es gibt genau EIN Fenster. Kommt ein zweiter Anlass, während einer schon

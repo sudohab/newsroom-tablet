@@ -35,6 +35,15 @@ Result ping();
 // damit ein Programmierfehler nicht versehentlich andere Endpunkte anspricht.
 Result get(const String &path);
 
+// Wie get(), schickt aber zusätzlich den Zustand des Tablets im Kopf
+// X-Tablet-Status mit (Firmware, Build-Nummer, WLAN, Speicher). Nur für die
+// regelmäßige Zustandsabfrage gedacht.
+Result getWithStatus(const String &path, const String &status);
+
+// Nächste Anfragen auf eine neue Verbindung zwingen (z. B. vor einem
+// Firmware-Download, der eine eigene Verbindung aufbaut).
+void closeConnection();
+
 // POST mit JSON-Körper auf die Tablet-Schnittstelle, mit Geräte-Token.
 Result postJson(const String &path, const String &json);
 

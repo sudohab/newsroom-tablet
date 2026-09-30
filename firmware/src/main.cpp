@@ -25,6 +25,7 @@
 #include "api_client.h"
 #include "display_control.h"
 #include "lvgl_port/lvgl_v8_port.h"
+#include "ota.h"
 #include "root_ca.h"
 #include "serial_console.h"
 #include "settings_store.h"
@@ -66,21 +67,20 @@ void configureTimeOnce() {
 
 }  // namespace
 
-void setup() {
-    Serial.begin(115200);
-    // Kurz warten, damit die ersten Meldungen über USB-CDC nicht verloren
-    // gehen – der Port meldet sich beim Rechner erst nach dem Start an.
-    delay(300);
-    Serial.printf("\n%s %s startet\n", cfg::kDeviceName, cfg::kFirmwareVersion);
-
-    settings_store::begin();
-
-    // --- Anzeige ------------------------------------------------------------
+// Panel und LVGL starten – aufgerufen in einer Aufgabe auf KERN 1.
+//
+// Warum eine eigene Aufgabe? setup() und loop() laufen seit 30.09.2026 auf
+// Kern 0 (sdkconfig: CONFIG_ARDUINO_RUN_CORE0), damit alle Netzabfragen samt
+// TLS vom Bild getrennt sind. Die Unterbrechungen des RGB-Panels landen aber
+// auf dem Kern, der board->begin() aufruft, und lv_timer_handler() muss auf
+// demselben Kern laufen (Anleitung der Bibliothek, "Solution for screen
+// drift"). Also wird genau dieser Teil auf Kern 1 ausgeführt – dort läuft
+// danach nur noch das Bild.
+bool startDisplay() {
     board = new Board();
     if (!board->init()) {
-        Serial.println("[panel] Board konnte nicht gestartet werden - Neustart");
-        delay(3000);
-        ESP.restart();
+        Serial.println("[panel] Board konnte nicht gestartet werden");
+        return false;
     }
 
     // Gegen Flackern: Der Bounce-Puffer liegt im schnellen internen RAM und
@@ -124,10 +124,8 @@ void setup() {
     }
 
     if (!board->begin()) {
-        // Ohne Anzeige ist das Gerät nutzlos. Neustart statt stiller Fehlfunktion.
-        Serial.println("[panel] Board konnte nicht gestartet werden – Neustart");
-        delay(3000);
-        ESP.restart();
+        Serial.println("[panel] Board konnte nicht gestartet werden");
+        return false;
     }
 
     // Beleuchtung einschalten. Ein Prozentwert waere hier irrefuehrend: Der
@@ -138,10 +136,47 @@ void setup() {
 
     Serial.printf("[start] vor LVGL: %u Byte intern frei\n", ESP.getFreeHeap());
     if (!lvgl_port_init(board->getLCD(), board->getTouch())) {
-        Serial.println("[lvgl] Start fehlgeschlagen – Neustart");
+        Serial.println("[lvgl] Start fehlgeschlagen");
+        return false;
+    }
+    return true;
+
+}
+
+struct DisplayStart {
+    SemaphoreHandle_t done;
+    bool ok;
+};
+
+void displayStartTask(void *arg) {
+    auto *ctx = static_cast<DisplayStart *>(arg);
+    ctx->ok = startDisplay();
+    xSemaphoreGive(ctx->done);
+    vTaskDelete(nullptr);
+}
+
+void setup() {
+    Serial.begin(115200);
+    // Kurz warten, damit die ersten Meldungen über USB-CDC nicht verloren
+    // gehen – der Port meldet sich beim Rechner erst nach dem Start an.
+    delay(300);
+    Serial.printf("\n%s %s startet\n", cfg::kDeviceName, cfg::kFirmwareVersion);
+
+    settings_store::begin();
+    ota::begin();
+
+    // --- Anzeige: auf Kern 1 (siehe startDisplay) ---------------------------
+    DisplayStart start = {xSemaphoreCreateBinary(), false};
+    xTaskCreatePinnedToCore(displayStartTask, "anzeige_start", 12288, &start, 5, nullptr, 1);
+    xSemaphoreTake(start.done, portMAX_DELAY);
+    vSemaphoreDelete(start.done);
+    if (!start.ok) {
+        // Ohne Anzeige ist das Gerät nutzlos. Neustart statt stiller Fehlfunktion.
+        Serial.println("[panel] Anzeige konnte nicht gestartet werden – Neustart");
         delay(3000);
         ESP.restart();
     }
+    Serial.printf("[start] Hauptschleife auf Kern %d, Bild auf Kern 1\n", xPortGetCoreID());
 
     tablet_state::begin();
     ui::begin();
@@ -174,6 +209,7 @@ void loop() {
     wifi_manager::loop();
     configureTimeOnce();
     tablet_state::loop();
+    ota::loop();
     ui::tick();
     // LVGL selbst läuft in einer eigenen Aufgabe; diese Schleife muss nur
     // regelmäßig drankommen und darf den Prozessor nicht blockieren.

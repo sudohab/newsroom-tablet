@@ -19,7 +19,7 @@ using namespace ui_theme;
 constexpr lv_coord_t kWidth = 560;
 constexpr lv_coord_t kHeight = 260;
 
-enum class Kind { None, Call, Timer };
+enum class Kind { None, Call, Timer, Washer };
 Kind shown = Kind::None;
 
 lv_obj_t *box = nullptr;
@@ -32,6 +32,7 @@ lv_obj_t *buttonOff = nullptr;
 String shownTimerId;
 String pendingStopId;
 volatile bool stopRequested = false;
+volatile bool washerAckRequested = false;
 
 // Ein Anruf wird nur angezeigt, nicht bedient: Das Display hat kein Mikrofon,
 // und den Hörer nimmt man am Telefon ab. Deshalb hat dieses Fenster nur einen
@@ -45,6 +46,13 @@ void hide() {
 }
 
 void onOff(lv_event_t *) {
+    if (shown == Kind::Washer) {
+        // „Erledigt“: Der Pi setzt die Maschine zurück; das Fenster geht zu,
+        // sobald die nächste Zustandsabfrage das bestätigt.
+        washerAckRequested = true;
+        lv_label_set_text(labelDetail, "Wird bestätigt …");
+        return;
+    }
     if (shown == Kind::Timer && !shownTimerId.isEmpty()) {
         pendingStopId = shownTimerId;
         stopRequested = true;
@@ -168,11 +176,30 @@ void update() {
         return;
     }
 
+    // Die Waschmaschine hat Zeit – sie steht hinter Anruf und Timer.
+    if (state.washerDone) {
+        if (shown != Kind::Washer) {
+            show(Kind::Washer, "WASCHMASCHINE",
+                 state.washerName.isEmpty() ? String("Fertig") : state.washerName + " fertig",
+                 "Die Wäsche kann raus.", kCall, "Erledigt", &ui_font_30);
+        }
+        return;
+    }
+
     // Kein Anlass mehr – der Pi hat bestätigt, dass nichts mehr klingelt.
     if (shown != Kind::None) hide();
 }
 
 void work() {
+    if (washerAckRequested) {
+        washerAckRequested = false;
+        const String error = tablet_state::sendAction("{\"action\":\"washer_ack\"}");
+        if (!error.isEmpty()) {
+            lvgl_port_lock(-1);
+            lv_label_set_text(labelDetail, error.c_str());
+            lvgl_port_unlock();
+        }
+    }
     if (!stopRequested) return;
     stopRequested = false;
 

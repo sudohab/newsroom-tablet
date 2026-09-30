@@ -3,13 +3,15 @@
 // (siehe src/settings_store.h, claude.md §1).
 #pragma once
 
+#include "firmware_info.h"
+
 #include <stdint.h>
 
 namespace cfg {
 
 // Anzeigename in Logs und auf der Startseite
 constexpr char kDeviceName[] = "newsroom21 Tisch-Tablet";
-constexpr char kFirmwareVersion[] = "0.1.0";
+constexpr char kFirmwareVersion[] = FIRMWARE_VERSION;   // firmware_info.h
 
 // Voreingestellte Adresse von newsroom21 (Pi 5 im Heimnetz). Änderbar auf der
 // Einstellungsseite des Geräts; die Vorgabe spart die Ersteinrichtung.

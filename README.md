@@ -8,7 +8,9 @@ Einstellungsseite auf dem Gerät, aufgebaut wie die Weboberfläche.
 * Plan, Hardwaredaten und Sicherheitskonzept: [docs/BAUPLAN.md](docs/BAUPLAN.md)
 * Bedienung und Installation: dieses Dokument (wächst mit den Etappen)
 
-**Stand:** Etappe 1 fertig und auf dem Gerät – Anzeige, Touch, WLAN-Einrichtung
+**Stand (30.09.2026):** Firmware 0.2.0 – Updates über das Netz (Tab „Updates“ in
+newsroom21), Bild allein auf Kern 1. Ältere Etappen siehe BAUPLAN. Etappe 1:
+Anzeige, Touch, WLAN-Einrichtung
 am Bildschirm, Uhrzeit, verschlüsselter Verbindungstest zum Pi.
 
 ---

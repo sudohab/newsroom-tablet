@@ -2,7 +2,11 @@
 
 #include <ArduinoJson.h>
 
+#include <WiFi.h>
+
 #include "api_client.h"
+#include "firmware_info.h"
+#include "ota.h"
 #include "settings_store.h"
 #include "tablet_config.h"
 #include "wifi_manager.h"
@@ -25,6 +29,20 @@ bool sameList(const std::vector<T> &a, const std::vector<T> &b,
     return true;
 }
 uint32_t lastPollMs = 0;
+ota::Offer pendingOffer;
+bool offerPending = false;
+
+// Zustand für newsroom21, z. B. "rssi=-54;heap=180000;psram=7000000;
+// uptime=77;fw=0.2.0;ip=192.168.178.50;fwmodel=tablet-s3;build=2026093001".
+String statusHeader() {
+    char status[200];
+    snprintf(status, sizeof(status),
+             "rssi=%d;heap=%u;psram=%u;uptime=%lu;fw=%s;ip=%s;fwmodel=%s;build=%lld",
+             WiFi.RSSI(), (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getFreePsram(),
+             millis() / 1000UL, FIRMWARE_VERSION, WiFi.localIP().toString().c_str(),
+             FIRMWARE_MODEL, (long long)FIRMWARE_BUILD);
+    return String(status);
+}
 // Nach einem Fehler nicht sofort wieder anklopfen – sonst hängt die Schleife
 // bei einem abgeschalteten Pi dauerhaft im Zeitlimit fest.
 uint32_t nextPollDelayMs = cfg::kStatusPollMs;
@@ -62,6 +80,9 @@ JsonDocument makeFilter() {
     filter["system"]["volume"] = true;
     filter["config_version"] = true;
     filter["command"] = true;
+    filter["washer"]["state"] = true;
+    filter["washer"]["name"] = true;
+    filter["firmware"] = true;
     return filter;
 }
 
@@ -152,6 +173,23 @@ void parse(const String &body) {
         next.commandType = take(command["type"], 16);
     }
 
+    JsonObjectConst washer = doc["washer"];
+    next.washerDone = !washer.isNull() && take(washer["state"], 16) == "done";
+    next.washerName = take(washer["name"], 40);
+
+    // Nach „Installieren“ in der Weboberfläche: das Manifest. Geprüft wird
+    // es erst in ota::handleOffer (Modell, Build-Nummer, Signatur).
+    JsonObjectConst firmware = doc["firmware"];
+    if (!firmware.isNull()) {
+        pendingOffer.model = take(firmware["model"], 32);
+        pendingOffer.build = firmware["build"] | 0LL;
+        pendingOffer.size = firmware["size"] | 0LL;
+        pendingOffer.sha256 = take(firmware["sha256"], 64);
+        pendingOffer.signature = take(firmware["signature"], 200);
+        pendingOffer.label = take(firmware["label"], 32);
+        offerPending = true;
+    }
+
     // Nur neu zeichnen, wenn sich wirklich etwas geändert hat – sonst flackert
     // die Anzeige im Zwei-Sekunden-Takt.
     const bool same = next.online == snapshot.online
@@ -174,7 +212,8 @@ void parse(const String &body) {
         && next.configVersion == snapshot.configVersion
         && next.commandId == snapshot.commandId
         && next.timerExpired == snapshot.timerExpired
-        && next.timerId == snapshot.timerId;
+        && next.timerId == snapshot.timerId
+        && next.washerDone == snapshot.washerDone;
 
     // Die Listen getrennt vergleichen: Sie kosten beim Neuaufbau am meisten.
     const bool sameEvents = sameList<Snapshot::Event>(
@@ -216,7 +255,7 @@ void loop() {
         return;
     }
 
-    const api_client::Result result = api_client::get("/api/tablet/state");
+    const api_client::Result result = api_client::getWithStatus("/api/tablet/state", statusHeader());
     if (!result.ok) {
         applyError(result.error);
         // Bei Fehlern langsamer nachfragen, höchstens alle 15 Sekunden.
@@ -224,7 +263,13 @@ void loop() {
         return;
     }
     nextPollDelayMs = cfg::kStatusPollMs;
+    ota::confirmWorking();   // eine neue Firmware hat newsroom21 erreicht
     parse(result.body);
+    if (offerPending) {
+        offerPending = false;
+        api_client::closeConnection();   // Speicher für die Download-Verbindung
+        ota::handleOffer(pendingOffer);  // kehrt nur bei einem Fehler zurück
+    }
 }
 
 const Snapshot &current() { return snapshot; }

@@ -77,6 +77,10 @@ struct Snapshot {
     // Offener Probier-Befehl aus der Weboberfläche
     int commandId = 0;
     String commandType;
+
+    // Waschmaschine fertig (nur solange sie nicht als erledigt markiert ist)
+    bool washerDone = false;
+    String washerName;
 };
 
 // Einmal beim Start aufrufen.

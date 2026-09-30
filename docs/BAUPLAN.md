@@ -1082,3 +1082,40 @@ der Text in den JSON-Körper geht.
 könnte ein Gerät mit „alle" die Sperre der einzelnen Uhren umgehen.
 
 *Serverseite: newsroom21 `997d8c7` (Weboberfläche) und `2da581d` (Tablet).*
+
+### 2026-09-30 — Updates über das Netz, Kern 1 nur fürs Bild
+
+**Verrutschen – die Kernaufteilung.** Nachgesehen in der erzeugten
+`sdkconfig`: Die Arduino-Hauptschleife (`CONFIG_ARDUINO_RUNNING_CORE=1`) – und
+damit JEDE Netzabfrage samt TLS –, die WLAN-Ereignisse des Arduino-Kerns
+(`CONFIG_ARDUINO_EVENT_RUNNING_CORE=1`) und der TCP/IP-Stapel (keine
+Kernbindung) liefen auf demselben Kern wie Panel und LVGL. Jetzt:
+
+| | Kern |
+|---|---|
+| Panel-Unterbrechungen, LVGL (`lv_timer_handler`) | 1 |
+| Hauptschleife (Netz, TLS, Seitenlogik), Arduino-Ereignisse, lwIP, WLAN-Treiber | 0 |
+
+Panel und LVGL starten in `main.cpp` in einer eigenen Aufgabe auf Kern 1
+(`startDisplay`), weil die Unterbrechungen des RGB-Panels auf dem Kern landen,
+der `board->begin()` aufruft, und LVGL dort laufen muss (Lehre vom 23.09.).
+Beim Start steht im Protokoll: `[start] Hauptschleife auf Kern 0, Bild auf Kern 1`.
+
+**OTA.** Neue Partitionstabelle (`partitions.csv`): `otadata`, zwei
+Programmbereiche zu 3 MB. `nvs` bleibt an derselben Stelle und gleich groß –
+WLAN und Token überleben das Umstellen. `src/ota.cpp`: Manifest aus der
+Zustandsabfrage, Signaturprüfung (ECDSA P-256, `include/ota_pubkey.h`,
+erzeugt von `scripts/make_ota_pubkey.sh`), Download über `esp_http_client`
+direkt in den freien Bereich, SHA-256-Vergleich, Rückfall nach 5 Minuten
+ohne Kontakt zu newsroom21 (`CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE`,
+`verifyRollbackLater()`). Während des Ladens liegt ein Hinweis über allem.
+Veröffentlichen: `scripts/release.sh`.
+
+**Zustand an den Pi.** Das Tablet schickte bisher keinen `X-Tablet-Status`;
+jetzt: rssi, heap, psram, uptime, fw, ip, fwmodel, build – in newsroom21 zu
+sehen im Tab Updates.
+
+**Waschmaschine fertig.** Aufblendfenster hinter Anruf und Timer, Knopf
+„Erledigt“ (Aktion `washer_ack`).
+
+Firmware 0.2.0 (Build 2026093001) – einmal per USB aufzuspielen.

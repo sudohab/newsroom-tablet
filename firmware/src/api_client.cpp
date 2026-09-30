@@ -106,7 +106,7 @@ void closeClient() {
 
 Result request(const String &url, esp_http_client_method_t method, const String &body,
                bool withToken, uint8_t *buffer = nullptr, size_t capacity = 0,
-               size_t *received = nullptr) {
+               size_t *received = nullptr, const String *statusHeader = nullptr) {
     Result result;
 
     if (wifi_manager::state() != wifi_manager::State::Connected) {
@@ -173,6 +173,13 @@ Result request(const String &url, esp_http_client_method_t method, const String 
         esp_http_client_set_header(client, "Authorization", header.c_str());
     }
     esp_http_client_set_header(client, "Accept", "application/json");
+    // Kopfzeilen bleiben an einer wiederverwendeten Verbindung hängen – den
+    // Zustand deshalb bei jeder anderen Anfrage ausdrücklich entfernen.
+    if (statusHeader != nullptr && statusHeader->length() <= 200) {
+        esp_http_client_set_header(client, "X-Tablet-Status", statusHeader->c_str());
+    } else {
+        esp_http_client_delete_header(client, "X-Tablet-Status");
+    }
     if (!body.isEmpty()) {
         esp_http_client_set_header(client, "Content-Type", "application/json");
         esp_http_client_set_post_field(client, body.c_str(), body.length());
@@ -263,6 +270,17 @@ Result get(const String &path) {
     }
     return request(buildUrl(path), HTTP_METHOD_GET, "", true);
 }
+
+Result getWithStatus(const String &path, const String &status) {
+    Result result;
+    if (!checkPath(path)) {
+        result.error = "Ungueltiger Pfad";
+        return result;
+    }
+    return request(buildUrl(path), HTTP_METHOD_GET, "", true, nullptr, 0, nullptr, &status);
+}
+
+void closeConnection() { closeClient(); }
 
 Result getBinary(const String &path, const String &query,
                  uint8_t *buffer, size_t capacity, size_t &received) {

@@ -67,3 +67,19 @@ CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 # Einsprungpunkt (der setup() und loop() aufruft) nur, wenn der automatische
 # Start eingeschaltet ist.
 CONFIG_AUTOSTART_ARDUINO=y
+
+# --- Kerne: Kern 1 gehört dem Bild ----------------------------------------
+# Bis 30.09.2026 liefen Hauptschleife (alle Netzabfragen samt TLS), die
+# WLAN-Ereignisse des Arduino-Kerns und der TCP/IP-Stapel mit auf Kern 1 –
+# demselben Kern wie Panel und LVGL. Jetzt macht Kern 1 nur noch das Bild;
+# alles Netz läuft auf Kern 0 (dort sitzt der WLAN-Treiber ohnehin). Panel
+# und LVGL werden in main.cpp gezielt auf Kern 1 gestartet.
+CONFIG_ARDUINO_RUN_CORE0=y
+CONFIG_ARDUINO_EVENT_RUN_CORE0=y
+CONFIG_LWIP_TCPIP_TASK_AFFINITY_CPU0=y
+
+# --- Updates über das Netz ----------------------------------------------
+# Rückfall: Eine neue Firmware gilt erst als gut, wenn sie newsroom21
+# erreicht hat (src/ota.cpp). Startet sie nicht oder meldet sie sich nicht,
+# kehrt der Bootloader zur vorigen zurück.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
