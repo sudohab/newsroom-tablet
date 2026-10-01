@@ -70,6 +70,7 @@ struct Snapshot {
 
     // System
     int volume = -1;              // -1 = unbekannt
+    int alarmVolume = -1;         // Wecker-Lautstärke (Weckton, Ansage, Weckradio)
 
     // Einstellungen: ändert sich die Version, holt das Tablet sie neu
     int configVersion = -1;
@@ -146,5 +147,7 @@ String snooze();
 String alarmOff();
 String volumeUp();
 String volumeDown();
+// Wecker-Lautstärke 0–100 % (getrennt von Radio/Podcast)
+String setAlarmVolume(int percent);
 
 }  // namespace tablet_state

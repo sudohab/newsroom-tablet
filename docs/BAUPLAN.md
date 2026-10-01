@@ -1146,3 +1146,13 @@ Restzeit, Düse/Bett), rechts der Bürodrucker HP OfficeJet Pro 8730 per IPP
 (Zustand, Meldungen wie „Papier leer" in Rot, vier Tintenbalken in der
 Patronenfarbe; Schwarz als helles Grau, sonst unsichtbar auf schwarzem
 Grund; ≤ 10 % rot). Nicht eingerichtete Drucker zeigen einen Hinweis.
+
+### 2026-10-01 — 0.3.2: Wecker-Lautstärke
+
+newsroom21 hat jetzt eine eigene Wecker-Lautstärke (Weckton, Ansage,
+Weckradio), getrennt von Radio/Podcast. Auf der Seite „Wecker" rechts unten:
+„WECKER-LAUTSTÄRKE – 60% +" in 10er-Schritten (Aktion `alarm_volume_set`,
+Wert aus `system.alarm_volume` im Zustand). Dafür entfällt der ausgegraute
+Platzhalter „am Gerät klingeln" (Board ohne Ton, Idee zurückgestellt).
+Schnelle Doppeltipper: Der Pi nimmt eine Aktion je Sekunde an – das Gerät
+wartet 1,1 s und schickt dann den zuletzt gewünschten Wert.

@@ -147,16 +147,22 @@ void work() {
 namespace alarms {
 namespace {
 
-enum class Job { None, Load, Save, Toggle };
+enum class Job { None, Load, Save, Toggle, AlarmVolume };
 volatile Job job = Job::None;
 
 lv_obj_t *page = nullptr;
 lv_obj_t *status = nullptr;
 lv_obj_t *area = nullptr;
+lv_obj_t *labelAlarmVolume = nullptr;
+int pendingAlarmVolume = -1;
+// Der Pi nimmt höchstens eine Aktion je Sekunde an; und bis die nächste
+// Zustandsabfrage den neuen Wert bringt, bleibt die Anzeige beim Gewünschten.
+uint32_t lastAlarmVolumeSentMs = 0;
+constexpr uint32_t kActionGapMs = 1100;
+constexpr uint32_t kHoldDisplayMs = 4000;
 lv_obj_t *rollerHour = nullptr;
 lv_obj_t *rollerMinute = nullptr;
 lv_obj_t *daySwitches[7] = {};
-lv_obj_t *deviceSwitch = nullptr;
 
 std::vector<tablet_data::Alarm> list;
 String pendingId;
@@ -188,6 +194,20 @@ void onAlarmClicked(lv_event_t *event) {
 String twoDigits(int value) {
     return (value < 10 ? "0" : "") + String(value);
 }
+
+// Wecker-Lautstärke in 10er-Schritten. Ausgangspunkt ist der zuletzt
+// gewünschte Wert, sonst der vom Pi gemeldete – so zählen schnelle
+// Doppeltipper richtig, auch bevor der Pi geantwortet hat.
+void changeAlarmVolume(int step) {
+    const int base = pendingAlarmVolume >= 0 ? pendingAlarmVolume
+                                             : tablet_state::current().alarmVolume;
+    if (base < 0) return;
+    pendingAlarmVolume = constrain(base + step, 0, 100);
+    lv_label_set_text(labelAlarmVolume, (String(pendingAlarmVolume) + "%").c_str());
+    job = Job::AlarmVolume;
+}
+void onAlarmLouder(lv_event_t *) { changeAlarmVolume(10); }
+void onAlarmQuieter(lv_event_t *) { changeAlarmVolume(-10); }
 
 }  // namespace
 
@@ -244,26 +264,56 @@ lv_obj_t *create(lv_obj_t *parent) {
     // --- rechts: vorhandene Wecker ----------------------------------------
     makeSeparator(page, 440, 46, 1, kHeight - 50);
     makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 464, 50, "GESTELLT (PI)");
-    area = makeScrollArea(page, 464, 76, kWidth - 464, 150);
+    area = makeScrollArea(page, 464, 76, kWidth - 464, 120);
 
-    // Weckton am Gerät – vorbereitet, aber noch ohne Wirkung: Das Board hat
-    // keine Tonausgabe. Der Schalter bleibt deshalb ausgegraut, damit klar
-    // ist, dass es ihn geben wird, er aber noch nichts tut.
-    makeWrappedLabel(page, &ui_font_18, kTextMuted, 464, 232, kWidth - 480,
-                     "AM GERÄT KLINGELN (noch ohne Ton)");
-    deviceSwitch = lv_switch_create(page);
-    lv_obj_set_size(deviceSwitch, 48, 26);
-    lv_obj_set_pos(deviceSwitch, 464, 260);
-    lv_obj_add_state(deviceSwitch, LV_STATE_DISABLED);
+    // Wecker-Lautstärke (Weckton, Ansage, Weckradio) – getrennt von der
+    // Lautstärke für Radio und Podcast auf der Radio-Seite. Hier stand vorher
+    // der ausgegraute Schalter „am Gerät klingeln": Das Board hat keinen Ton
+    // (Idee zurückgestellt, siehe BAUPLAN 30.09.2026).
+    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 464, 204, "WECKER-LAUTSTÄRKE");
+    lv_obj_t *volumeBar = makeButtonBar(page, 464, 230, 250, 46);
+    addBarButton(volumeBar, "–", onAlarmQuieter, 70, 46);
+    labelAlarmVolume = lv_label_create(volumeBar);
+    lv_obj_set_style_text_font(labelAlarmVolume, &ui_font_22, 0);
+    lv_obj_set_style_text_color(labelAlarmVolume, lv_color_hex(kText), 0);
+    lv_obj_set_width(labelAlarmVolume, 90);
+    lv_obj_set_style_text_align(labelAlarmVolume, LV_TEXT_ALIGN_CENTER, 0);
+    lv_label_set_text(labelAlarmVolume, "--%");
+    addBarButton(volumeBar, "+", onAlarmLouder, 70, 46);
     return page;
 }
 
 void activate() { job = Job::Load; }
 
 void work() {
+    // Wecker-Lautstärke nachziehen – sie ändert sich auch am Handy oder in
+    // der Weboberfläche. Solange ein eigener Wunsch unterwegs ist, bleibt er
+    // stehen.
+    if (pendingAlarmVolume < 0 && millis() - lastAlarmVolumeSentMs > kHoldDisplayMs) {
+        const int value = tablet_state::current().alarmVolume;
+        lvgl_port_lock(-1);
+        lv_label_set_text(labelAlarmVolume, value >= 0 ? (String(value) + "%").c_str() : "--%");
+        lvgl_port_unlock();
+    }
+
     const Job current = job;
     if (current == Job::None) return;
     job = Job::None;
+
+    if (current == Job::AlarmVolume) {
+        // Mehrere Tipps hintereinander: erst nach der Pause des Pi schicken,
+        // dann gleich den letzten gewünschten Wert.
+        if (millis() - lastAlarmVolumeSentMs < kActionGapMs) { job = Job::AlarmVolume; return; }
+        const int wanted = pendingAlarmVolume;
+        const String error = tablet_state::setAlarmVolume(wanted);
+        lastAlarmVolumeSentMs = millis();
+        if (pendingAlarmVolume != wanted) { job = Job::AlarmVolume; return; }
+        pendingAlarmVolume = -1;
+        lvgl_port_lock(-1);
+        lv_label_set_text(status, error.isEmpty() ? "" : ("Fehler: " + error).c_str());
+        lvgl_port_unlock();
+        return;
+    }
 
     if (current == Job::Load) {
         const String error = tablet_data::fetchAlarms(list);

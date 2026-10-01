@@ -78,6 +78,7 @@ JsonDocument makeFilter() {
     filter["media"]["state"] = true;
     filter["media"]["title"] = true;
     filter["system"]["volume"] = true;
+    filter["system"]["alarm_volume"] = true;
     filter["config_version"] = true;
     filter["command"] = true;
     filter["washer"]["state"] = true;
@@ -170,6 +171,7 @@ void parse(const String &body) {
     next.mediaTitle = take(media["title"], 80);
 
     next.volume = doc["system"]["volume"] | -1;
+    next.alarmVolume = constrain(doc["system"]["alarm_volume"] | -1, -1, 100);
     next.configVersion = doc["config_version"] | -1;
 
     JsonObjectConst command = doc["command"];
@@ -221,6 +223,7 @@ void parse(const String &body) {
         && next.tempMin == snapshot.tempMin
         && next.tempMax == snapshot.tempMax
         && next.volume == snapshot.volume
+        && next.alarmVolume == snapshot.alarmVolume
         && next.configVersion == snapshot.configVersion
         && next.commandId == snapshot.commandId
         && next.timerExpired == snapshot.timerExpired
@@ -368,5 +371,9 @@ String snooze() { return sendAction("{\"action\":\"snooze\"}"); }
 String alarmOff() { return sendAction("{\"action\":\"alarm_off\"}"); }
 String volumeUp() { return sendAction("{\"action\":\"volume_up\"}"); }
 String volumeDown() { return sendAction("{\"action\":\"volume_down\"}"); }
+String setAlarmVolume(int percent) {
+    percent = constrain(percent, 0, 100);
+    return sendAction("{\"action\":\"alarm_volume_set\",\"percent\":" + String(percent) + "}");
+}
 
 }  // namespace tablet_state
