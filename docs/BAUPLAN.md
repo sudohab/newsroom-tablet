@@ -1156,3 +1156,21 @@ Wert aus `system.alarm_volume` im Zustand). Dafür entfällt der ausgegraute
 Platzhalter „am Gerät klingeln" (Board ohne Ton, Idee zurückgestellt).
 Schnelle Doppeltipper: Der Pi nimmt eine Aktion je Sekunde an – das Gerät
 wartet 1,1 s und schickt dann den zuletzt gewünschten Wert.
+
+### 2026-10-03 — 0.4.0: Seite „Kamera"
+
+Neue Seite nach „Drucker" (`src/ui_page_camera.cpp`). Links das letzte Bild
+der ESP32-CAM, rechts Name, Zustand, „Bild holen" und „Stream
+starten/stoppen" (Aktionen `camera_snapshot`, `camera_stream`).
+
+newsroom21 liefert das Bild verkleinert auf 384×288 als Baseline-JPEG
+(`GET /api/tablet/camera/<id>/frame.jpg?seq=N`, rund 10–15 KB; 304, wenn das
+Tablet das Bild schon hat). Das Tablet entpackt es EINMAL mit `esp_new_jpeg`
+in einen RGB565-Puffer im PSRAM (zwei Puffer, damit nie ein halbes Bild zu
+sehen ist) und zeigt ihn als `LV_IMG_CF_TRUE_COLOR` – LVGL muss beim
+Neuzeichnen nichts entpacken. Abfrage alle 1,5 s, im Stream alle 0,3 s.
+
+Datenschutz wie auf dem Pi: nichts wird gespeichert. Beim Verlassen der Seite
+verschwindet das Bild, und ein laufender Stream wird gestoppt
+(`camera::background()` aus der Hauptschleife – der Rückruf beim Seitenwechsel
+darf nicht ins Netz).

@@ -121,6 +121,16 @@ void activate();
 void work();
 }  // namespace printers
 
+namespace camera {
+lv_obj_t *create(lv_obj_t *parent);
+void activate();
+void work();
+void deactivate();
+// Aus der Hauptschleife, auch wenn die Seite nicht offen ist: stoppt einen
+// Stream, den diese Seite gestartet hat, nachdem man sie verlassen hat.
+void background();
+}  // namespace camera
+
 namespace wifi {
 lv_obj_t *create(lv_obj_t *parent);
 void activate();

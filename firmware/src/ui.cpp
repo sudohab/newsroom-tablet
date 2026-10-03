@@ -262,6 +262,8 @@ void tick() {
 
     // Ohne Sperre: Das Abstellen eines Timers geht über das Netz.
     ui_popup::work();
+    // Stream der Kamera stoppen, wenn die Seite verlassen wurde.
+    ui_pages::camera::background();
 
     // Ein Seitenwechsel wurde im Rückruf nur vorgemerkt – hier darf die Seite
     // nachladen, ohne die Anzeige zu blockieren.

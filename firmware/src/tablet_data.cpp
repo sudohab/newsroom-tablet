@@ -603,4 +603,72 @@ String fetchPrinters(Printer3d &printer3d, OfficePrinter &office) {
     }, &out);
 }
 
+// --- Kamera -------------------------------------------------------------------
+
+namespace {
+// Kennung einer Kamera, bevor sie in einen Pfad oder eine Aktion geht.
+bool looksLikeCameraId(const String &id) {
+    if (id.isEmpty() || id.length() > 32) return false;
+    for (size_t i = 0; i < id.length(); ++i) {
+        const char c = id[i];
+        if (!(c >= 'a' && c <= 'z') && !isDigit(c) && c != '-') return false;
+    }
+    return true;
+}
+}  // namespace
+
+String fetchCameras(std::vector<Camera> &cameras) {
+    cameras.clear();
+    JsonDocument filter;
+    for (const char *key : {"id", "name", "online", "snapshot", "stream",
+                            "stream_seconds_left", "seq", "age"}) {
+        filter["cameras"][0][key] = true;
+    }
+    return fetchList("/api/tablet/cameras", "Kameras nicht abrufbar", filter,
+                     [](JsonDocument &doc, void *raw) {
+        auto *out = static_cast<std::vector<Camera> *>(raw);
+        for (JsonObjectConst entry : doc["cameras"].as<JsonArrayConst>()) {
+            Camera camera;
+            camera.id = take(entry["id"], 32);
+            if (!looksLikeCameraId(camera.id)) continue;
+            camera.name = take(entry["name"], 40);
+            camera.online = entry["online"] | false;
+            camera.snapshot = entry["snapshot"] | false;
+            camera.stream = entry["stream"] | false;
+            camera.streamSecondsLeft = constrain(entry["stream_seconds_left"] | 0, 0, 3600);
+            camera.seq = max(entry["seq"] | 0, 0);
+            camera.age = entry["age"] | -1;
+            out->push_back(camera);
+            if (out->size() >= 4) break;
+        }
+    }, &cameras);
+}
+
+String fetchCameraFrame(const String &cameraId, int haveSeq,
+                        uint8_t *buffer, size_t capacity, size_t &received) {
+    received = 0;
+    if (!looksLikeCameraId(cameraId)) return "Ungueltige Kamera";
+    const api_client::Result result = api_client::getBinary(
+        "/api/tablet/camera/" + cameraId + "/frame.jpg", "seq=" + String(haveSeq),
+        buffer, capacity, received);
+    if (result.status == 304 || result.status == 404) { received = 0; return String(); }
+    if (!result.ok) return result.error.isEmpty() ? String("Bild nicht abrufbar") : result.error;
+    return String();
+}
+
+String cameraSnapshot(const String &cameraId) {
+    if (!looksLikeCameraId(cameraId)) return "Ungueltige Kamera";
+    const api_client::Result result = api_client::postJson(
+        "/api/tablet/action", "{\"action\":\"camera_snapshot\",\"camera_id\":" + quoted(cameraId) + "}");
+    return result.ok ? String() : (result.error.isEmpty() ? String("Anfordern fehlgeschlagen") : result.error);
+}
+
+String cameraStream(const String &cameraId, bool on) {
+    if (!looksLikeCameraId(cameraId)) return "Ungueltige Kamera";
+    const api_client::Result result = api_client::postJson(
+        "/api/tablet/action", "{\"action\":\"camera_stream\",\"camera_id\":" + quoted(cameraId) +
+        ",\"enabled\":" + (on ? "true" : "false") + "}");
+    return result.ok ? String() : (result.error.isEmpty() ? String("Umschalten fehlgeschlagen") : result.error);
+}
+
 }  // namespace tablet_data

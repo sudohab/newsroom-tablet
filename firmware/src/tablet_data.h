@@ -196,4 +196,28 @@ struct OfficePrinter {
 
 String fetchPrinters(Printer3d &printer3d, OfficePrinter &office);
 
+// --- Kamera -------------------------------------------------------------------
+// Die Kamera schickt Bilder nur auf Anforderung an newsroom21; das Tablet
+// holt dort die Liste und das zuletzt angekommene Bild (verkleinert, JPEG).
+struct Camera {
+    String id;
+    String name;
+    bool online = false;
+    bool snapshot = false;   // Einzelbild angefordert, noch nicht da
+    bool stream = false;
+    int streamSecondsLeft = 0;
+    int seq = 0;             // laufende Nummer des letzten Bildes, 0 = keines
+    int age = -1;            // Alter in Sekunden
+};
+
+String fetchCameras(std::vector<Camera> &cameras);
+
+// Holt das Bild als JPEG in `buffer`. `received` = 0 heißt: unverändert
+// (das Tablet hat `haveSeq` schon) oder kein Bild da.
+String fetchCameraFrame(const String &cameraId, int haveSeq,
+                        uint8_t *buffer, size_t capacity, size_t &received);
+
+String cameraSnapshot(const String &cameraId);
+String cameraStream(const String &cameraId, bool on);
+
 }  // namespace tablet_data

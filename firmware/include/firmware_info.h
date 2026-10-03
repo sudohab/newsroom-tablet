@@ -4,8 +4,8 @@
 // Build-Nummer an, und die Nummer ist mitsigniert (kein Zurückstufen).
 //   FIRMWARE_BUILD    JJJJMMTTNN
 //   FIRMWARE_VERSION  Anzeige in newsroom21 und auf der Seite „Gerät“
-#define FIRMWARE_VERSION "0.3.2"
-#define FIRMWARE_BUILD 2026100101LL
+#define FIRMWARE_VERSION "0.4.0"
+#define FIRMWARE_BUILD 2026100301LL
 
 // Welches Abbild zu diesem Gerät passt (Ordner firmware/<modell>/ in newsroom21)
 #define FIRMWARE_MODEL "tablet-s3"
