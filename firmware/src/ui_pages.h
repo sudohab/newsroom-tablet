@@ -109,6 +109,12 @@ void work();
 void deactivate();
 }  // namespace clocks
 
+namespace signal {
+lv_obj_t *create(lv_obj_t *parent);
+void activate();
+void work();
+}  // namespace signal
+
 namespace timers {
 lv_obj_t *create(lv_obj_t *parent);
 void activate();

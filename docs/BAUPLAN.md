@@ -1195,3 +1195,24 @@ der Hauptschleife, und bis dahin könnte jemand den Knopf weitergeschaltet
 haben. Meldet eine ältere newsroom21-Fassung das Feld `signal` nicht, bleibt
 alles wie in 0.4.0.
 
+### 2026-10-11 — 0.6.0: Seite „Signal"
+
+Neue Seite zwischen „Uhren" und „Warnungen": die letzten Signal-Nachrichten
+zum Nachlesen, neueste oben (`GET /api/tablet/signal`). Je Nachricht eine
+Zeile mit Uhrzeit und Name, darunter der Text; vom Display selbst geschickte
+Nachrichten stehen grau dabei. Der Pi liefert nur Name, Zeit und Text –
+Kennungen und Rufnummern kommen auf dem Gerät nie an, gespeichert wird hier
+nichts.
+
+Abgefragt wird alle zehn Sekunden, solange die Seite offen ist (die übrigen
+Listenseiten: fünf Minuten). Neu gezeichnet wird nur, wenn sich `seq` geändert
+hat – sonst spränge die Liste beim Lesen immer wieder an den Anfang.
+
+Geschrieben wird weiter auf der Seite „Uhren" (Ziel „Familie (Signal)"); die
+Seite „Signal" weist darauf hin. Der Pi begrenzt die Antwort auf 12 KB, weil
+`api_client` höchstens 16 KB annimmt und Umlaute als `\uXXXX` reisen.
+
+Noch nicht gebaut: ein Hinweis auf anderen Seiten, dass eine neue Nachricht da
+ist (Aufblendfenster oder Marke in der Menüleiste). Bemerkt wird eine
+Nachricht bisher über die Laufschrift und den Infoton der Uhren.
+

@@ -179,6 +179,25 @@ String sendPreset(const String &clockId, int presetIndex);
 // Einen frei getippten Text schicken.
 String sendClockText(const String &clockId, const String &text);
 
+// --- Signal (Seite "Signal") ------------------------------------------------
+// Die letzten Nachrichten, die der Pi ueber die Uhren geschickt hat -- zum
+// Nachlesen. Der Pi liefert nur Name (aus seiner Freigabeliste), Uhrzeit und
+// Text; Kennungen und Rufnummern kommen hier nie an.
+struct SignalMessage {
+    String when;    // "14:03" oder "09.10. 14:03"
+    String label;   // "Oma", "Familie", "Familienterminal"
+    String text;
+    bool own = false;   // vom Tisch-Display selbst geschickt
+};
+
+struct SignalInbox {
+    bool enabled = false;   // in der Weboberflaeche eingeschaltet?
+    bool canSend = false;   // Ziel "Familie (Signal)" auf der Seite "Uhren" vorhanden?
+    long seq = -1;          // aendert sich mit jeder neuen Nachricht
+};
+
+String fetchSignal(std::vector<SignalMessage> &messages, SignalInbox &inbox);
+
 // --- Drucker ------------------------------------------------------------------
 // 3D-Drucker (Moonraker) und Bürodrucker (IPP) – newsroom21 fragt beide ab,
 // das Tablet holt nur das Ergebnis. Nicht eingerichtet = present false.

@@ -12,7 +12,7 @@ using namespace ui_theme;
 // „Start" steht in der MITTE, nicht am Anfang: Beim Einschalten rastet die
 // Leiste auf dieser Seite ein, und von dort geht es nach links wie nach
 // rechts. Links davon liegt, was man im Vorbeigehen braucht (Timer,
-// Nachrichten an die Uhren, Warnungen, Schlagzeilen), rechts davon das
+// Nachrichten an die Uhren, Signal, Warnungen, Schlagzeilen), rechts davon das
 // Nachschlagen und das Einstellbare.
 //
 // Wer hier etwas einfügt, muss nichts weiter tun: `homeIndex()` sucht die
@@ -20,6 +20,7 @@ using namespace ui_theme;
 const Page kPages[] = {
     {"Timer",    timers::create,   timers::activate,   timers::work},
     {"Uhren",    clocks::create,   clocks::activate,   clocks::work, clocks::deactivate},
+    {"Signal",   signal::create,   signal::activate,   signal::work},
     {"Warnungen", warnings::create, warnings::activate, warnings::work},
     {"News",     news::create,     news::activate,     news::work},
     {"Start",    home::create,     home::activate,     home::work},

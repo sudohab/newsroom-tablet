@@ -551,6 +551,40 @@ String sendClockText(const String &clockId, const String &text) {
     return sendClockCommand(clockId, "\"text\":" + jsonString(trimmed));
 }
 
+// --- Signal -------------------------------------------------------------------
+
+String fetchSignal(std::vector<SignalMessage> &messages, SignalInbox &inbox) {
+    messages.clear();
+    inbox = SignalInbox();
+    JsonDocument filter;
+    filter["enabled"] = true;
+    filter["can_send"] = true;
+    filter["seq"] = true;
+    filter["messages"][0]["when"] = true;
+    filter["messages"][0]["label"] = true;
+    filter["messages"][0]["text"] = true;
+    filter["messages"][0]["own"] = true;
+
+    struct Out { std::vector<SignalMessage> *messages; SignalInbox *inbox; } out{&messages, &inbox};
+    return fetchList("/api/tablet/signal", "Nachrichten nicht abrufbar", filter,
+                     [](JsonDocument &doc, void *raw) {
+        auto *o = static_cast<Out *>(raw);
+        o->inbox->enabled = doc["enabled"] | false;
+        o->inbox->canSend = doc["can_send"] | false;
+        o->inbox->seq = doc["seq"] | 0L;
+        for (JsonObjectConst entry : doc["messages"].as<JsonArrayConst>()) {
+            SignalMessage message;
+            message.when = take(entry["when"], 16);
+            message.label = take(entry["label"], 40);
+            // Der Pi begrenzt auf 240 Bytes; etwas Luft, dann ist Schluss.
+            message.text = take(entry["text"], 320);
+            message.own = entry["own"] | false;
+            if (!message.text.isEmpty()) o->messages->push_back(message);
+            if (o->messages->size() >= 20) break;
+        }
+    }, &out);
+}
+
 // --- Drucker ------------------------------------------------------------------
 
 namespace {

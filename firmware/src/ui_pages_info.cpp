@@ -316,6 +316,85 @@ void work() {
 }  // namespace warnings
 
 // ---------------------------------------------------------------------------
+// Signal: die letzten Nachrichten zum Nachlesen
+// ---------------------------------------------------------------------------
+//
+// Was über die Uhren gelaufen ist, steht hier noch eine Weile (der Pi hält
+// die letzten 20 bereit, nur im Arbeitsspeicher). Neueste oben.
+//
+// Anders als die übrigen Listenseiten wird hier alle zehn Sekunden
+// nachgefragt, solange die Seite offen ist – eine Nachricht soll nicht fünf
+// Minuten auf sich warten lassen. Neu gezeichnet wird aber nur, wenn sich
+// wirklich etwas geändert hat (`seq`): Sonst spränge die Liste beim Lesen
+// immer wieder an den Anfang.
+//
+// Geschrieben wird nicht hier, sondern auf der Seite „Uhren" (Ziel „Familie
+// (Signal)") – dort sind Tastatur und vorgefertigte Texte schon vorhanden.
+namespace signal {
+namespace {
+ListPage view;
+std::vector<tablet_data::SignalMessage> list;
+tablet_data::SignalInbox inbox;
+constexpr uint32_t kSignalRefreshMs = 10000;
+uint32_t lastPollMs = 0;
+long shownSeq = -2;          // -2 = noch nie gezeichnet
+bool shownEnabled = false;
+bool shownError = false;
+}  // namespace
+
+lv_obj_t *create(lv_obj_t *parent) { return view.build(parent, "Signal"); }
+
+void activate() {
+    view.needsRefresh = true;
+    shownSeq = -2;           // beim Öffnen immer frisch zeichnen
+}
+
+void work() {
+    const uint32_t now = millis();
+    if (!view.needsRefresh && now - lastPollMs < kSignalRefreshMs) return;
+    view.needsRefresh = false;
+    lastPollMs = now;
+
+    const String error = tablet_data::fetchSignal(list, inbox);
+    const bool failed = !error.isEmpty();
+    // Nichts Neues: Bild in Ruhe lassen.
+    if (!failed && !shownError && inbox.seq == shownSeq && inbox.enabled == shownEnabled) return;
+    shownSeq = failed ? -2 : inbox.seq;
+    shownEnabled = inbox.enabled;
+    shownError = failed;
+
+    lvgl_port_lock(-1);
+    lv_obj_clean(view.area);
+    if (failed) {
+        view.setStatus(error);
+    } else if (!inbox.enabled) {
+        view.setStatus("");
+        addLine(view.area, "Signal ist nicht eingeschaltet", &ui_font_22, kTextMuted, 700);
+        addLine(view.area, "Einschalten in der Weboberfläche: Einstellungen, Signal",
+                &ui_font_18, kTextMuted, 700);
+    } else {
+        view.setStatus(list.empty() ? String("")
+                       : String(list.size()) + (list.size() == 1 ? " Nachricht" : " Nachrichten"));
+        if (list.empty()) {
+            addLine(view.area, "Noch keine Nachrichten", &ui_font_22, kTextMuted, 700);
+        }
+        for (const auto &message : list) {
+            // Uhrzeit und Name in einer Zeile, darunter der Text. Eigene
+            // Nachrichten (vom Display geschickt) zurückhaltender.
+            addLine(view.area, message.when + "   " + message.label, &ui_font_18,
+                    message.own ? kTextMuted : kAccent, 700);
+            addLine(view.area, message.text, &ui_font_22, kText, 700);
+        }
+        if (inbox.canSend) {
+            addLine(view.area, "Schreiben: Seite Uhren, Ziel „Familie (Signal)“",
+                    &ui_font_18, kTextMuted, 700);
+        }
+    }
+    lvgl_port_unlock();
+}
+}  // namespace signal
+
+// ---------------------------------------------------------------------------
 // Verpasste Anrufe
 // ---------------------------------------------------------------------------
 namespace calls {
