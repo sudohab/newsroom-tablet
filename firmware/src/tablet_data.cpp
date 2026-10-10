@@ -484,10 +484,14 @@ String sendClockCommand(const String &clockId, const String &payload) {
 
 }  // namespace
 
-String fetchClocks(std::vector<Clock> &clocks, std::vector<String> &presets) {
+String fetchClocks(std::vector<Clock> &clocks, std::vector<String> &presets,
+                   SignalTarget &signal) {
     clocks.clear();
     presets.clear();
+    signal = SignalTarget();
     JsonDocument filter;
+    filter["signal"]["family"] = true;
+    filter["signal"]["text_max"] = true;
     filter["clocks"][0]["id"] = true;
     filter["clocks"][0]["name"] = true;
     filter["clocks"][0]["online"] = true;
@@ -514,7 +518,25 @@ String fetchClocks(std::vector<Clock> &clocks, std::vector<String> &presets) {
         if (!text.isEmpty()) presets.push_back(text);
         if (presets.size() >= 12) break;
     }
+    // Fehlt das Feld (aeltere newsroom21-Fassung oder nicht freigeschaltet),
+    // bleibt das Ziel einfach aus.
+    signal.family = doc["signal"]["family"] | false;
+    const int textMax = doc["signal"]["text_max"] | 160;
+    signal.textMax = (textMax >= 20 && textMax <= 160) ? textMax : 160;
     return String();
+}
+
+String sendSignalFamily(const String &text) {
+    const String trimmed = [&text]() { String t = text; t.trim(); return t; }();
+    if (trimmed.isEmpty()) return "Leerer Text";
+    // length() zaehlt Bytes; ein Umlaut hat zwei. Die genaue Zeichengrenze
+    // prueft der Pi, hier nur ein grober Deckel.
+    if (trimmed.length() > 640) return "Text zu lang";
+    const String json = "{\"action\":\"signal_family_message\",\"text\":"
+                      + jsonString(trimmed) + "}";
+    const api_client::Result result = api_client::postJson("/api/tablet/action", json);
+    return result.ok ? String()
+                     : (result.error.isEmpty() ? String("Senden fehlgeschlagen") : result.error);
 }
 
 String sendPreset(const String &clockId, int presetIndex) {

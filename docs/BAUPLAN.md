@@ -1174,3 +1174,24 @@ Datenschutz wie auf dem Pi: nichts wird gespeichert. Beim Verlassen der Seite
 verschwindet das Bild, und ein laufender Stream wird gestoppt
 (`camera::background()` aus der Hauptschleife – der Rückruf beim Seitenwechsel
 darf nicht ins Netz).
+
+### 2026-10-10 — 0.5.0: Ziel „Familie (Signal)" auf der Seite „Uhren"
+
+newsroom21 hat jetzt ein eigenes Signal-Konto (HANDBUCH dort, „Optionale
+Signal-Anbindung"). Ist die Texteingabe in der Weboberfläche freigeschaltet,
+meldet `GET /api/tablet/clocks` zusätzlich `signal: {family, text_max}` – und
+der Zielknopf schaltet nach der letzten Uhr auf **Familie (Signal)** weiter.
+Vorgefertigte Texte und freie Eingabe gehen dann als
+`{"action":"signal_family_message","text":…}` an den Pi; das Textfeld erlaubt
+für dieses Ziel 160 statt 80 Zeichen.
+
+Bewusst eng: Das Gerät schickt nur den Text. Es kennt weder die Gruppe noch
+Mitglieder oder Rufnummern, kann keinen Empfänger wählen, kein Kamerabild
+anfordern und keinen Befehl auslösen. Der Pi sendet unter seinem eigenen Konto
+mit vorangestelltem „Familienterminal:" – wer am Display stand, weiß niemand.
+
+Das Ziel wird beim Antippen festgehalten (`pendingSignal`): Gesendet wird in
+der Hauptschleife, und bis dahin könnte jemand den Knopf weitergeschaltet
+haben. Meldet eine ältere newsroom21-Fassung das Feld `signal` nicht, bleibt
+alles wie in 0.4.0.
+
