@@ -20,6 +20,12 @@ constexpr char kKeyNightStart[] = "night_start";
 constexpr char kKeyNightEnd[] = "night_end";
 constexpr char kKeyDayOff[] = "day_off";
 constexpr char kKeyNightOff[] = "night_off";
+constexpr char kKeyHomeReturn[] = "home_ret";
+// Obergrenze für „zur Startseite nach“: eine Stunde. Größere Werte (z. B.
+// aus einem beschädigten Speicher) gelten nicht.
+constexpr uint16_t kMaxHomeReturnMinutes = 60;
+// Zwischenspeicher für homeReturnMinutes(); -1 = noch nicht gelesen.
+int32_t cachedHomeReturn = -1;
 
 // Liest einen Text und begrenzt ihn auf die erlaubte Länge. Ein manipulierter
 // oder beschädigter NVS soll nirgends zu überlangen Werten führen.
@@ -164,6 +170,25 @@ uint16_t nightOffMinutes() { return readMinutes(kKeyNightOff, cfg::kDefaultNight
 bool setNightOffMinutes(uint16_t minutes) {
     if (!ready || minutes > 1440) return false;
     prefs.putUShort(kKeyNightOff, minutes);
+    return true;
+}
+
+uint16_t homeReturnMinutes() {
+    if (cachedHomeReturn < 0) {
+        uint16_t value = cfg::kDefaultHomeReturnMinutes;
+        if (ready && prefs.isKey(kKeyHomeReturn)) {
+            value = prefs.getUShort(kKeyHomeReturn, value);
+            if (value > kMaxHomeReturnMinutes) value = cfg::kDefaultHomeReturnMinutes;
+        }
+        cachedHomeReturn = value;
+    }
+    return static_cast<uint16_t>(cachedHomeReturn);
+}
+
+bool setHomeReturnMinutes(uint16_t minutes) {
+    if (!ready || minutes > kMaxHomeReturnMinutes) return false;
+    prefs.putUShort(kKeyHomeReturn, minutes);
+    cachedHomeReturn = minutes;
     return true;
 }
 

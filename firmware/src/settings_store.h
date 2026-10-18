@@ -64,4 +64,11 @@ bool setDayOffMinutes(uint16_t minutes);
 uint16_t nightOffMinutes();
 bool setNightOffMinutes(uint16_t minutes);
 
+// Nach so vielen Minuten ohne Berührung kehrt die Oberfläche zur Startseite
+// (Kachelraster) zurück; 0 = nie. Wird bei jedem Durchlauf der Hauptschleife
+// gefragt und deshalb im Arbeitsspeicher gehalten, nicht jedes Mal aus dem
+// Flash gelesen.
+uint16_t homeReturnMinutes();
+bool setHomeReturnMinutes(uint16_t minutes);
+
 }  // namespace settings_store

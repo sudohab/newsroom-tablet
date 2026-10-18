@@ -17,3 +17,7 @@ LV_FONT_DECLARE(ui_font_18);   // Nebentexte, Quellen, Statuszeile
 LV_FONT_DECLARE(ui_font_22);   // Fließtext: Termine, Schlagzeilen, Knöpfe
 LV_FONT_DECLARE(ui_font_30);   // Überschriften, Weckzeit, Wetter
 LV_FONT_DECLARE(ui_font_56);   // die Uhr
+
+// Symbolschrift (Lucide, ISC) für die Kacheln der Startseite – nur die
+// Zeichen aus ui_icons.h, sonst nichts (kein Text!).
+LV_FONT_DECLARE(ui_icons_32);

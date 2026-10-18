@@ -1,39 +1,41 @@
 #include "ui_pages.h"
 
 #include "fonts/ui_fonts.h"
+#include "ui_icons.h"
 #include "ui_theme.h"
 
 namespace ui_pages {
 
 using namespace ui_theme;
 
-// Reihenfolge der Seiten in der Menüleiste.
+// Reihenfolge der Seiten = Reihenfolge der Kacheln auf der Startseite
+// (5 Spalten × 3 Zeilen, zeilenweise von links oben).
 //
-// „Start" steht in der MITTE, nicht am Anfang: Beim Einschalten rastet die
-// Leiste auf dieser Seite ein, und von dort geht es nach links wie nach
-// rechts. Links davon liegt, was man im Vorbeigehen braucht (Timer,
-// Nachrichten an die Uhren, Signal, Warnungen, Schlagzeilen), rechts davon das
-// Nachschlagen und das Einstellbare.
+//   Zeile 1  Informieren:  News · Wetter · Warnungen · Termine · Signal
+//   Zeile 2  Kontakt/Haus: Anrufe · Uhren · Timer · Kamera · Drucker
+//   Zeile 3  Hören/Gerät:  Radio · Podcast · Wecker · WLAN · Gerät
 //
+// Die Startseite selbst steht vorn und hat keine Kachel (icon = nullptr).
 // Wer hier etwas einfügt, muss nichts weiter tun: `homeIndex()` sucht die
-// Startseite selbst.
+// Startseite selbst, und die Startseite legt für jeden Eintrag mit Symbol
+// eine Kachel an. Mehr als 15 Kacheln passen aber nicht ins Raster.
 const Page kPages[] = {
-    {"Timer",    timers::create,   timers::activate,   timers::work},
-    {"Uhren",    clocks::create,   clocks::activate,   clocks::work, clocks::deactivate},
-    {"Signal",   signal::create,   signal::activate,   signal::work},
-    {"Warnungen", warnings::create, warnings::activate, warnings::work},
-    {"News",     news::create,     news::activate,     news::work},
-    {"Start",    home::create,     home::activate,     home::work},
-    {"Wetter",   weather::create,  weather::activate,  weather::work},
-    {"Termine",  calendar::create, calendar::activate, calendar::work},
-    {"Anrufe",   calls::create,    calls::activate,    calls::work},
-    {"Drucker",  printers::create, printers::activate, printers::work},
-    {"Kamera",   camera::create,   camera::activate,   camera::work, camera::deactivate},
-    {"Radio",    radio::create,    radio::activate,    radio::work},
-    {"Podcast",  podcasts::create, podcasts::activate, podcasts::work},
-    {"Wecker",   alarms::create,   alarms::activate,   alarms::work},
-    {"WLAN",     wifi::create,     wifi::activate,     wifi::work},
-    {"Geraet",   settings::create, settings::activate, settings::work},
+    {"Start",     nullptr,              kAccent,  home::create,     home::activate,     home::work},
+    {"News",      ui_icons::kNews,      kAccent,  news::create,     news::activate,     news::work},
+    {"Wetter",    ui_icons::kWeather,   0xffd60a, weather::create,  weather::activate,  weather::work},
+    {"Warnungen", ui_icons::kWarning,   0xff9f0a, warnings::create, warnings::activate, warnings::work},
+    {"Termine",   ui_icons::kCalendar,  kAccent,  calendar::create, calendar::activate, calendar::work},
+    {"Signal",    ui_icons::kSignal,    kAccent,  signal::create,   signal::activate,   signal::work},
+    {"Anrufe",    ui_icons::kCalls,     kCall,    calls::create,    calls::activate,    calls::work},
+    {"Uhren",     ui_icons::kClocks,    kAccent,  clocks::create,   clocks::activate,   clocks::work, clocks::deactivate},
+    {"Timer",     ui_icons::kTimer,     kAccent,  timers::create,   timers::activate,   timers::work},
+    {"Kamera",    ui_icons::kCamera,    kAccent,  camera::create,   camera::activate,   camera::work, camera::deactivate},
+    {"Drucker",   ui_icons::kPrinter,   kAccent,  printers::create, printers::activate, printers::work},
+    {"Radio",     ui_icons::kRadio,     kAccent,  radio::create,    radio::activate,    radio::work},
+    {"Podcast",   ui_icons::kPodcast,   kAccent,  podcasts::create, podcasts::activate, podcasts::work},
+    {"Wecker",    ui_icons::kAlarm,     kAccent,  alarms::create,   alarms::activate,   alarms::work},
+    {"WLAN",      ui_icons::kWifi,      kTextMuted, wifi::create,   wifi::activate,     wifi::work},
+    {"Gerät",     ui_icons::kSettings,  kTextMuted, settings::create, settings::activate, settings::work},
 };
 
 const Page *all() { return kPages; }

@@ -105,15 +105,18 @@ Liste (`STATUS`, `TOKEN <wert>`, `HOST <adresse>`, `FORGET-TOKEN`,
 | Datei | Aufgabe |
 |---|---|
 | `src/main.cpp` | Startreihenfolge: Einstellungen → Panel/Touch → LVGL → Oberfläche → WLAN → Uhrzeit |
-| `src/settings_store.*` | Gespeicherte Werte im NVS: WLAN, Pi-Adresse, Geräte-Token, Helligkeit. Prüft jede Eingabe auf Länge und erlaubte Zeichen |
+| `src/settings_store.*` | Gespeicherte Werte im NVS: WLAN, Pi-Adresse, Geräte-Token, Abschaltzeiten, „Zum Start nach“ (0–60 Min). Prüft jede Eingabe auf Länge und erlaubte Zeichen |
 | `src/wifi_manager.*` | Verbinden, Netzsuche, erneuter Versuch mit wachsendem Abstand. **Kein eigener Hotspot** |
 | `src/api_client.*` | HTTPS zu newsroom21: prüft die Kette gegen die eigene Root-CA, folgt keinen Weiterleitungen, begrenzt die Antwortgröße |
-| `src/ui.*` | Startseite (Uhr, Status, Testknopf) und WLAN-Seite (Liste, Tastatur) |
+| `src/ui.*` | Rahmen: Kopfzeile (Uhr – ein Tipp führt zur Startseite –, Datum, Wecker, Wetter), Knopf „‹ Start“ auf allen Unterseiten, Rückkehr zur Startseite nach einstellbarer Ruhezeit |
+| `src/ui_page_home.cpp` | Startseite als Kachelraster (5 × 3): je Seite eine Kachel mit Symbol, Name, Kurzinfo und rotem Zähler (verpasste Anrufe, Warnungen, klingelnde Timer) |
+| `src/ui_pages_common.cpp` | Liste aller Seiten mit Symbol und Farbe – ihre Reihenfolge ist die Reihenfolge der Kacheln |
+| `src/ui_icons.h` | Symbole der Kacheln (Zeichen der Symbolschrift `ui_icons_32`) |
 | `src/serial_console.*` | Einrichtung per USB: Token und Pi-Adresse setzen. Zeigt nie Token oder WLAN-Passwort an, sondern nur, **ob** etwas hinterlegt ist |
 | `src/ui_theme.*` | Aussehen an einer Stelle: Farben, Flächen, Knöpfe, scrollbare Listen |
 | `src/display_control.*` | Helligkeit (Abdunkeln), Nachtmodus, Bildschirm aus, Aufwecken per Berührung |
 | `src/tablet_state.*` | Zustand vom Pi holen, Aktionen schicken (Wecker, Lautstärke, Radio) |
-| `src/fonts/` | Schriften **mit Umlauten** (LVGLs eingebaute können nur ASCII), erzeugt von `scripts/build_fonts.sh` |
+| `src/fonts/` | Schriften **mit Umlauten** (LVGLs eingebaute können nur ASCII) und die Symbolschrift `ui_icons_32` (Lucide, Lizenz ISC, Version und Prüfsumme fest), erzeugt von `scripts/build_fonts.sh` |
 | `src/lvgl_port/` | Offizielle LVGL-Anbindung von Espressif (unverändert übernommen) |
 
 ## 6. Sicherheitshinweise

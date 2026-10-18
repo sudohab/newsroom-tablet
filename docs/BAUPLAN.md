@@ -1216,3 +1216,40 @@ Noch nicht gebaut: ein Hinweis auf anderen Seiten, dass eine neue Nachricht da
 ist (Aufblendfenster oder Marke in der Menüleiste). Bemerkt wird eine
 Nachricht bisher über die Laufschrift und den Infoton der Uhren.
 
+
+### 2026-10-18 — 0.7.0: Startseite als Kachelraster statt Menüleiste
+
+Die waagerecht scrollende Menüleiste mit 16 Reitern ist weg. Hannes wählte
+aus vier Entwürfen (Gruppen unten, Seitenleiste, Kachelraster, Favoriten +
+„Mehr“) das Kachelraster.
+
+**Startseite** (`ui_page_home.cpp`): 15 Kacheln, 5 × 3, je 140 × 114 px, mit
+Symbol, Name und einer Kurzinfo. Reihenfolge = `kPages` in
+`ui_pages_common.cpp` (die Startseite steht jetzt vorn, ohne Kachel):
+
+    News · Wetter · Warnungen · Termine · Signal
+    Anrufe · Uhren · Timer · Kamera · Drucker
+    Radio · Podcast · Wecker · WLAN · Gerät
+
+Die frühere Startseite (nächster Termin, Schlagzeile, Anrufe/Radio/
+Warnungen) ist in die Kacheln gewandert – auf Hannes' Wunsch: Termine zeigt
+den nächsten Termin, News die Quelle der aktuellen Schlagzeile (Wechsel alle
+zwei Minuten), Radio/Podcast den laufenden Titel, Drucker den Fortschritt.
+Rote Zähler oben rechts: verpasste Anrufe, Warnungen, klingelnde Timer.
+Texte werden nur bei Änderung gesetzt (`setText`), sonst zeichnete LVGL die
+Kacheln in jedem Durchlauf der Hauptschleife neu.
+
+**Zurück:** Knopf „‹ Start“ unten links (wo die Leiste war – die Seiten sind
+weiter 300 px hoch und reichen nicht dorthin), oder ein Tipp auf die Uhrzeit.
+Nach einer Zeit ohne Berührung kehrt die Oberfläche von selbst zum Raster
+zurück: Seite „Gerät“ → „Zum Start nach“ (nie / 1 / 2 / 5 / 10 Min,
+Voreinstellung 2), gespeichert im NVS (`home_ret`, höchstens 60, im RAM
+zwischengespeichert, weil es in jedem Durchlauf gefragt wird).
+
+**Symbole:** eigene Schrift `ui_icons_32` aus Lucide 1.48.0 (Lizenz ISC),
+nur die 15 benötigten Zeichen (41 KB Quelltext, im Flash deutlich weniger).
+`scripts/build_fonts.sh` lädt das npm-Paket mit fester Versionsnummer und
+prüft die SHA-256-Prüfsumme, bevor es die Schrift erzeugt. Zuordnung
+Symbol → Zeichen in `ui_icons.h`.
+
+Gebaut (Flash 57,9 %), am Gerät noch nicht gesehen.

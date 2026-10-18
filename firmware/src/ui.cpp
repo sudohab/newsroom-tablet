@@ -5,13 +5,17 @@
 
 #include "fonts/ui_fonts.h"
 #include "lvgl_port/lvgl_v8_port.h"
+#include "settings_store.h"
 #include "tablet_config.h"
 #include "tablet_state.h"
 #include "ui_pages.h"
 #include "ui_popup.h"
 #include "ui_theme.h"
 
-// Der Rahmen der Oberfläche: Kopfzeile, Inhaltsbereich, Menüleiste.
+// Der Rahmen der Oberfläche: Kopfzeile, Inhaltsbereich und – auf allen
+// Seiten außer der Startseite – der Knopf „‹ Start“ unten links.
+// Die Startseite ist ein Kachelraster (ui_page_home.cpp); eine Menüleiste
+// gibt es nicht mehr.
 // Die Seiten selbst liegen in ui_page_*.cpp (siehe ui_pages.h).
 
 namespace ui {
@@ -22,13 +26,17 @@ using namespace ui_theme;
 // --- Maße -------------------------------------------------------------------
 constexpr lv_coord_t kMargin = 24;
 constexpr lv_coord_t kHeaderHeight = 92;
-constexpr lv_coord_t kNavHeight = 56;
 constexpr lv_coord_t kContentTop = kHeaderHeight + 10;
-constexpr lv_coord_t kContentHeight = 480 - kContentTop - kNavHeight - 18;
+// Der Inhaltsbereich reicht bis fast an den unteren Rand: Das Kachelraster
+// der Startseite nutzt die ganze Höhe. Alle anderen Seiten sind 300 hoch
+// (wie zu Zeiten der Menüleiste) – darunter liegt der Knopf „‹ Start“.
+constexpr lv_coord_t kContentHeight = 480 - kContentTop - 12;
+constexpr lv_coord_t kBackWidth = 170;
+constexpr lv_coord_t kBackHeight = 50;
 
 lv_obj_t *screen = nullptr;
 lv_obj_t *content = nullptr;
-lv_obj_t *navBar = nullptr;
+lv_obj_t *backButton = nullptr;
 
 // Kopfzeile
 lv_obj_t *labelClock = nullptr;
@@ -37,14 +45,12 @@ lv_obj_t *labelAlarm = nullptr;
 lv_obj_t *labelWeather = nullptr;
 lv_obj_t *labelWeatherDetail = nullptr;
 
-// Seiten: Container und Menüknöpfe, gleiche Reihenfolge wie ui_pages::all().
+// Seiten-Container, gleiche Reihenfolge wie ui_pages::all().
 // Reichlich bemessen, damit eine neue Seite nicht stillschweigend hinten
 // herausfällt; `begin()` prüft es zusätzlich.
 constexpr int kMaxPages = 16;
 lv_obj_t *pageObjects[kMaxPages] = {};
-lv_obj_t *navButtons[kMaxPages] = {};
-// -1 = es ist noch keine Seite offen. Daran erkennt `showPage`, dass es die
-// erste ist – die soll ohne Laufbewegung in der Mitte stehen.
+// -1 = es ist noch keine Seite offen.
 int activePage = -1;
 // Seitenwechsel passieren im LVGL-Rückruf; die Seite darf aber erst aus der
 // Hauptschleife heraus Daten holen. Deshalb nur vormerken.
@@ -54,8 +60,18 @@ uint32_t lastClockMs = 0;
 
 // --- Kopfzeile ---------------------------------------------------------------
 
+void showPage(int index);
+
+// Ein Tipp auf die Uhrzeit führt ebenfalls zur Startseite – die Uhr ist
+// das, was man auf dem Gerät als Erstes sieht und am leichtesten trifft.
+void onClockClicked(lv_event_t *) { showPage(ui_pages::homeIndex()); }
+
 void buildHeader() {
     labelClock = makeLabel(screen, &ui_font_56, kText, LV_ALIGN_TOP_LEFT, kMargin, 8, "--:--");
+    lv_obj_add_flag(labelClock, LV_OBJ_FLAG_CLICKABLE);
+    // Größere Trefferfläche als die Ziffern selbst (Finger statt Mauszeiger).
+    lv_obj_set_ext_click_area(labelClock, 12);
+    lv_obj_add_event_cb(labelClock, onClockClicked, LV_EVENT_CLICKED, nullptr);
     labelDate = makeLabel(screen, &ui_font_22, kTextMuted, LV_ALIGN_TOP_LEFT, 232, 14,
                           cfg::kDeviceName);
     labelAlarm = makeLabel(screen, &ui_font_22, kText, LV_ALIGN_TOP_LEFT, 232, 46, "Weckruf –");
@@ -120,7 +136,7 @@ void updateHeaderState() {
     }
 }
 
-// --- Menüleiste --------------------------------------------------------------
+// --- Seitenwechsel -----------------------------------------------------------
 
 void showPage(int index) {
     if (index < 0 || index >= ui_pages::count()) return;
@@ -131,11 +147,13 @@ void showPage(int index) {
         } else {
             lv_obj_add_flag(pageObjects[i], LV_OBJ_FLAG_HIDDEN);
         }
-        // Der Knopf der offenen Seite ist eingefärbt – so sieht man auch beim
-        // Scrollen der Leiste, wo man gerade ist.
-        if (navButtons[i] != nullptr) {
-            lv_obj_set_style_bg_color(navButtons[i],
-                                      lv_color_hex(i == index ? kAccent : kSurface), 0);
+    }
+    // „‹ Start“ nur auf Unterseiten – auf der Startseite gibt es kein Zurück.
+    if (backButton != nullptr) {
+        if (index == ui_pages::homeIndex()) {
+            lv_obj_add_flag(backButton, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_clear_flag(backButton, LV_OBJ_FLAG_HIDDEN);
         }
     }
     // Die alte Seite aufräumen lassen, bevor die neue kommt.
@@ -144,66 +162,34 @@ void showPage(int index) {
         if (old->deactivate != nullptr) old->deactivate();
     }
 
-    const bool first = (activePage < 0);
     activePage = index;
     pendingActivate = index;
-
-    // Den Knopf der offenen Seite mittig in die Leiste schieben. Das
-    // Zentrieren macht LVGL von selbst, weil die Leiste auf
-    // LV_SCROLL_SNAP_CENTER steht.
-    if (navButtons[index] != nullptr) {
-        lv_obj_scroll_to_view(navButtons[index], first ? LV_ANIM_OFF : LV_ANIM_ON);
-    }
 }
 
-void onNavClicked(lv_event_t *event) {
-    const int index = static_cast<int>(reinterpret_cast<intptr_t>(lv_event_get_user_data(event)));
-    showPage(index);
+void onBackClicked(lv_event_t *) { showPage(ui_pages::homeIndex()); }
+
+void buildBackButton() {
+    // Unten links, wo vorher die Menüleiste war: Dort liegt der Daumen, und
+    // die Seiten (300 hoch) reichen nicht bis hierher.
+    backButton = makeButton(screen, "\xE2\x80\xB9  Start", onBackClicked, kBackWidth, kBackHeight,
+                            LV_ALIGN_BOTTOM_LEFT, kMargin, -10);
 }
 
-void buildNav() {
-    // Waagerecht scrollbare Leiste. Sie rastet an den Knöpfen ein, damit nie
-    // ein halber Knopf am Rand stehen bleibt.
-    navBar = lv_obj_create(screen);
-    lv_obj_set_size(navBar, 800, kNavHeight);
-    lv_obj_align(navBar, LV_ALIGN_BOTTOM_MID, 0, -8);
-    lv_obj_set_style_bg_opa(navBar, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(navBar, 0, 0);
-    lv_obj_set_style_pad_all(navBar, 0, 0);
-    lv_obj_set_style_pad_left(navBar, kMargin, 0);
-    lv_obj_set_style_pad_right(navBar, kMargin, 0);
-    lv_obj_set_style_pad_column(navBar, 10, 0);
-    lv_obj_set_flex_flow(navBar, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(navBar, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER,
-                          LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_scroll_dir(navBar, LV_DIR_HOR);
-    lv_obj_set_scroll_snap_x(navBar, LV_SCROLL_SNAP_CENTER);
-    lv_obj_set_scrollbar_mode(navBar, LV_SCROLLBAR_MODE_OFF);
-
-    for (int i = 0; i < min(ui_pages::count(), kMaxPages); ++i) {
-        lv_obj_t *btn = lv_btn_create(navBar);
-        lv_obj_set_size(btn, LV_SIZE_CONTENT, 44);
-        lv_obj_set_style_bg_color(btn, lv_color_hex(kSurface), 0);
-        lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
-        lv_obj_set_style_bg_color(btn, lv_color_hex(kSurfacePressed), LV_STATE_PRESSED);
-        lv_obj_set_style_radius(btn, 12, 0);
-        lv_obj_set_style_border_width(btn, 0, 0);
-        lv_obj_set_style_shadow_width(btn, 0, 0);
-        lv_obj_set_style_pad_hor(btn, 18, 0);
-        lv_obj_add_event_cb(btn, onNavClicked, LV_EVENT_CLICKED,
-                            reinterpret_cast<void *>(static_cast<intptr_t>(i)));
-
-        lv_obj_t *label = lv_label_create(btn);
-        lv_label_set_text(label, ui_pages::all()[i].label);
-        lv_obj_set_style_text_font(label, &ui_font_22, 0);
-        lv_obj_set_style_text_color(label, lv_color_hex(kText), 0);
-        lv_obj_center(label);
-
-        navButtons[i] = btn;
-    }
+// Nach einer Weile ohne Berührung zurück zur Startseite. Die Zeit stellt
+// man auf der Seite „Gerät“ ein (0 = nie). Gezählt wird mit LVGLs eigener
+// Ruhezeit – dieselbe, mit der auch der Bildschirm abschaltet.
+void returnHomeWhenIdle() {
+    const uint16_t minutes = settings_store::homeReturnMinutes();
+    if (minutes == 0 || activePage < 0 || activePage == ui_pages::homeIndex()) return;
+    if (lv_disp_get_inactive_time(nullptr) < static_cast<uint32_t>(minutes) * 60000UL) return;
+    // Ein Aufblendfenster (Anruf, Timer, Waschmaschine …) liegt über allem;
+    // die Seite darunter zu wechseln stört nicht, es bleibt sichtbar.
+    showPage(ui_pages::homeIndex());
 }
 
 }  // namespace
+
+void openPage(int index) { showPage(index); }
 
 void begin() {
     lvgl_port_lock(-1);
@@ -227,10 +213,7 @@ void begin() {
         if (pageObjects[i] != nullptr) lv_obj_add_flag(pageObjects[i], LV_OBJ_FLAG_HIDDEN);
     }
 
-    buildNav();
-    // Die Leiste muss ihre endgültigen Maße kennen, bevor mittig gescrollt
-    // werden kann – sonst stehen alle Knöpfe noch übereinander auf Null.
-    lv_obj_update_layout(screen);
+    buildBackButton();
     showPage(ui_pages::homeIndex());
     updateClock();
     updateHeaderState();
@@ -251,6 +234,11 @@ void tick() {
         updateClock();
         lvgl_port_unlock();
     }
+
+    // Zurück zur Startseite nach der eingestellten Ruhezeit
+    lvgl_port_lock(-1);
+    returnHomeWhenIdle();
+    lvgl_port_unlock();
 
     if (tablet_state::consumeChanged()) {
         lvgl_port_lock(-1);

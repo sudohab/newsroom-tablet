@@ -7,8 +7,14 @@
 //     ├──────────────────────────────────────────┤
 //     │ Inhalt: genau eine Seite ist sichtbar    │
 //     ├──────────────────────────────────────────┤
-//     │ Menüleiste, waagerecht scrollbar         │  immer sichtbar
+//     │ unten links: „‹ Start“ (nur auf Unterseiten)│
 //     └──────────────────────────────────────────┘
+//
+// Die Startseite ist ein Raster aus Kacheln – eine je Seite, mit Symbol,
+// Name und einer Kurzinfo (z. B. nächster Termin, laufender Sender).
+// Von jeder anderen Seite geht es mit „‹ Start“ (oder einem Tipp auf die
+// Uhrzeit) zurück; nach einer einstellbaren Zeit ohne Berührung auch von
+// selbst (Seite „Gerät“).
 //
 // Jede Seite ist ein Container im Inhaltsbereich; beim Wechseln wird der eine
 // eingeblendet und der andere versteckt. Das ist schneller und ruhiger als
@@ -28,7 +34,9 @@
 namespace ui_pages {
 
 struct Page {
-    const char *label;                      // Beschriftung in der Menüleiste
+    const char *label;                      // Name auf der Kachel der Startseite
+    const char *icon;                       // Symbol der Kachel (ui_icons.h), nullptr = keine Kachel
+    uint32_t tint;                          // Farbe des Symbols
     lv_obj_t *(*create)(lv_obj_t *parent);  // baut den Inhalt auf
     void (*activate)();                     // beim Öffnen der Seite
     void (*work)();                         // Daten holen, aus der Hauptschleife
@@ -39,12 +47,11 @@ struct Page {
     void (*deactivate)() = nullptr;
 };
 
-// Alle Seiten in der Reihenfolge, in der sie in der Menüleiste stehen.
+// Alle Seiten: zuerst die Startseite, danach in der Reihenfolge der Kacheln.
 const Page *all();
 int count();
 
-// Die Nummer der Startseite. Sie steht bewusst in der Mitte der Leiste,
-// deshalb wird sie gesucht statt fest eingetragen.
+// Die Nummer der Startseite (wird gesucht statt fest eingetragen).
 int homeIndex();
 
 // --- Die einzelnen Seiten ---------------------------------------------------

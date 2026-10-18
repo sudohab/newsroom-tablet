@@ -47,3 +47,31 @@ for spec in Medium:18:ui_font_18:VOLL Medium:22:ui_font_22:VOLL \
     --lv-include lvgl.h -o "$ZIEL/$name.c"
   echo "$name.c erzeugt"
 done
+
+# ---------------------------------------------------------------------------
+# Symbolschrift für die Kacheln der Startseite (ui_icons_32)
+#
+# Quelle: Lucide (https://lucide.dev), Lizenz ISC – frei nutzbar, auch in
+# Firmware. Version und Prüfsumme sind fest: Ein verändertes oder anderes
+# Paket bricht den Lauf ab, statt unbemerkt fremde Daten einzubauen.
+# Neue Version: Nummer ändern, Paket laden, sha256sum prüfen, hier eintragen.
+LUCIDE_VERSION="1.48.0"
+LUCIDE_SHA256="3c2ecda3d25f6a9692d83f8036d9a526f7da584a51af74cd16eda4498c5c33d8"
+curl -sfL -o "$ARBEIT/lucide.tgz" \
+  "https://registry.npmjs.org/lucide-static/-/lucide-static-$LUCIDE_VERSION.tgz"
+echo "$LUCIDE_SHA256  $ARBEIT/lucide.tgz" | sha256sum -c --quiet -
+tar -xzf "$ARBEIT/lucide.tgz" -C "$ARBEIT" package/font/lucide.ttf
+
+# Nur die Symbole, die wirklich gebraucht werden (je ~0,5 KB). Die Nummern
+# stehen in package/font/codepoints.json des Pakets; die Zuordnung zu den
+# Seiten steht in firmware/src/ui_icons.h – beides zusammen ändern.
+#   e348 newspaper  e216 cloud-sun  e193 triangle-alert  e063 calendar
+#   e116 message-circle  e133 phone  e087 clock  e1e0 timer  e064 camera
+#   e141 printer  e142 radio  e1fa podcast  e03a alarm-clock  e1ae wifi
+#   e154 settings
+SYMBOLE="0xe348,0xe216,0xe193,0xe063,0xe116,0xe133,0xe087,0xe1e0,0xe064,0xe141,0xe142,0xe1fa,0xe03a,0xe1ae,0xe154"
+npx --yes lv_font_conv@1.5.2 \
+  --font "$ARBEIT/package/font/lucide.ttf" -r "$SYMBOLE" \
+  --size 32 --bpp 4 --format lvgl --no-compress \
+  --lv-include lvgl.h -o "$ZIEL/ui_icons_32.c"
+echo "ui_icons_32.c erzeugt"

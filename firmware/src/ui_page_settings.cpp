@@ -6,7 +6,8 @@
 #include "ui_pages.h"
 #include "ui_theme.h"
 
-// Einstellungen des Geräts: Nachtmodus und Abschaltzeiten.
+// Einstellungen des Geräts: Nachtmodus, Abschaltzeiten und wann die
+// Oberfläche von selbst zur Startseite zurückkehrt.
 //
 // Alles hier wirkt **sofort** und wird im Gerät gespeichert; es gibt bewusst
 // keinen „Speichern"-Knopf.
@@ -32,11 +33,18 @@ lv_obj_t *rollerStart = nullptr;
 lv_obj_t *rollerEnd = nullptr;
 lv_obj_t *rollerDayOff = nullptr;
 lv_obj_t *rollerNightOff = nullptr;
+lv_obj_t *rollerHomeReturn = nullptr;
 lv_obj_t *status = nullptr;
 
 // Abschaltzeiten zur Auswahl – in Minuten, gleiche Reihenfolge wie im Text.
 constexpr uint16_t kOffChoices[] = {0, 1, 2, 5, 10, 30, 60};
 constexpr const char *kOffText = "nie\n1 Min\n2 Min\n5 Min\n10 Min\n30 Min\n60 Min";
+
+// Rückkehr zur Startseite – kürzere Auswahl, mehr als zehn Minuten wäre
+// kaum von „nie“ zu unterscheiden.
+constexpr uint16_t kHomeChoices[] = {0, 1, 2, 5, 10};
+constexpr const char *kHomeText = "nie\n1 Min\n2 Min\n5 Min\n10 Min";
+constexpr lv_coord_t kRollerWidth = 115;
 
 String hourOptions() {
     String text;
@@ -74,6 +82,13 @@ void onNightOffChanged(lv_event_t *event) {
     lv_label_set_text(status, "Gespeichert");
 }
 
+void onHomeReturnChanged(lv_event_t *event) {
+    const uint16_t index = lv_roller_get_selected(lv_event_get_target(event));
+    if (index >= sizeof(kHomeChoices) / sizeof(kHomeChoices[0])) return;
+    settings_store::setHomeReturnMinutes(kHomeChoices[index]);
+    lv_label_set_text(status, "Gespeichert");
+}
+
 void onOffNow(lv_event_t *) {
     // Sofort abschalten. Die nächste Berührung weckt wieder auf und wird
     // dabei nicht als Bedienung gewertet.
@@ -82,12 +97,13 @@ void onOffNow(lv_event_t *) {
 
 // Eine Auswahlwalze für die Abschaltzeit.
 lv_obj_t *makeOffRoller(lv_obj_t *parent, lv_coord_t x, lv_coord_t y,
-                        const char *caption, lv_event_cb_t handler) {
+                        const char *caption, lv_event_cb_t handler,
+                        const char *options = kOffText) {
     makeLabel(parent, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, x, y, caption);
     lv_obj_t *roller = lv_roller_create(parent);
-    lv_roller_set_options(roller, kOffText, LV_ROLLER_MODE_NORMAL);
+    lv_roller_set_options(roller, options, LV_ROLLER_MODE_NORMAL);
     lv_obj_set_pos(roller, x, y + 24);
-    lv_obj_set_width(roller, 150);
+    lv_obj_set_width(roller, kRollerWidth);
     lv_roller_set_visible_row_count(roller, 3);
     lv_obj_set_style_text_font(roller, &ui_font_22, 0);
     lv_obj_set_style_bg_color(roller, lv_color_hex(kSurface), 0);
@@ -126,9 +142,14 @@ lv_obj_t *create(lv_obj_t *parent) {
     // nebeneinander ueberschrieben sich - eine Beschriftung ist in LVGL so
     // breit wie ihr Text.
     makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 0, 46,
-              "BILDSCHIRM AUS NACH");
+              "BILDSCHIRM AUS");
     rollerDayOff = makeOffRoller(page, 0, 76, "AM TAG", onDayOffChanged);
-    rollerNightOff = makeOffRoller(page, 190, 76, "NACHTS", onNightOffChanged);
+    rollerNightOff = makeOffRoller(page, 130, 76, "NACHTS", onNightOffChanged);
+
+    // Dritte Walze: zurück zur Startseite. Eigene Überschrift, weil es nicht
+    // um den Bildschirm geht, sondern um die angezeigte Seite.
+    makeLabel(page, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, 260, 46, "ZUM START");
+    rollerHomeReturn = makeOffRoller(page, 260, 76, "NACH", onHomeReturnChanged, kHomeText);
 
     makeButton(page, "Jetzt aus", onOffNow, 150, 46, LV_ALIGN_TOP_LEFT, 0, 214, kAccent);
 
@@ -181,6 +202,10 @@ void activate() {
     for (size_t i = 0; i < sizeof(kOffChoices) / sizeof(kOffChoices[0]); ++i) {
         if (kOffChoices[i] == day) lv_roller_set_selected(rollerDayOff, i, LV_ANIM_OFF);
         if (kOffChoices[i] == night) lv_roller_set_selected(rollerNightOff, i, LV_ANIM_OFF);
+    }
+    const uint16_t homeReturn = settings_store::homeReturnMinutes();
+    for (size_t i = 0; i < sizeof(kHomeChoices) / sizeof(kHomeChoices[0]); ++i) {
+        if (kHomeChoices[i] == homeReturn) lv_roller_set_selected(rollerHomeReturn, i, LV_ANIM_OFF);
     }
     lv_label_set_text(status, "");
 }

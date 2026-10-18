@@ -38,6 +38,11 @@ constexpr uint8_t kDefaultNightEnd = 7;
 constexpr uint16_t kDefaultDayOffMinutes = 0;
 constexpr uint16_t kDefaultNightOffMinutes = 5;
 
+// Nach so vielen Minuten ohne Berührung zurück zur Startseite (0 = nie).
+// Zwei Minuten: lang genug zum Lesen einer Seite, kurz genug, dass das
+// Tablet beim nächsten Vorbeigehen wieder die Übersicht zeigt.
+constexpr uint16_t kDefaultHomeReturnMinutes = 2;
+
 // Zeitverhalten
 constexpr uint32_t kWifiConnectTimeoutMs = 20000;  // Verbindungsversuch
 constexpr uint32_t kHttpTimeoutMs = 8000;          // je HTTPS-Anfrage

@@ -20,6 +20,10 @@ namespace ui {
 // Baut alle Seiten auf. Muss nach dem Start von LVGL aufgerufen werden.
 void begin();
 
+// Eine Seite öffnen (Nummer wie in ui_pages::all()). Nur unter der
+// LVGL-Sperre aufrufen – z. B. aus dem Klick-Rückruf einer Kachel.
+void openPage(int index);
+
 // Regelmäßig aus loop() aufrufen: aktualisiert Uhr und Status und führt
 // angeforderte Netzwerkanfragen aus.
 void tick();
