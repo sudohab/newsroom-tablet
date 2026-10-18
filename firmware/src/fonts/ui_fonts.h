@@ -20,4 +20,5 @@ LV_FONT_DECLARE(ui_font_56);   // die Uhr
 
 // Symbolschrift (Lucide, ISC) für die Kacheln der Startseite – nur die
 // Zeichen aus ui_icons.h, sonst nichts (kein Text!).
-LV_FONT_DECLARE(ui_icons_32);
+LV_FONT_DECLARE(ui_icons_32);   // Kacheln + Wetter groß
+LV_FONT_DECLARE(ui_icons_22);   // nur Wettersymbole, Stundenleiste

@@ -18,6 +18,26 @@
 namespace tablet_data {
 
 // --- Wetter -----------------------------------------------------------------
+// „Unbekannt“ für Temperaturen (dort ist -1 ein gültiger Wert).
+constexpr int kNoTemp = -1000;
+
+// Eine Stunde der Vorschau (Seite „Wetter“: Stundenleiste und Kurve).
+struct WeatherHour {
+    String hour;          // "07"
+    int temp = kNoTemp;   // °C
+    int rain = -1;        // Regenwahrscheinlichkeit in %, -1 = unbekannt
+    int wmo = -1;         // Wettercode
+};
+
+// Ein Tag der Vorschau. Der erste heißt „Heute“.
+struct WeatherDay {
+    String name;          // "Heute", "Di", …
+    int max = kNoTemp;
+    int min = kNoTemp;
+    int rain = -1;
+    int wmo = -1;
+};
+
 struct Weather {
     bool valid = false;
     float temp = 0;
@@ -29,6 +49,14 @@ struct Weather {
     int wind = -1;
     int humidity = -1;
     String dayText;
+    // Ab Firmware 0.8.0 / newsroom21 vom 18.10.2026 – fehlt bei älteren Pi-Fassungen
+    int feels = kNoTemp;        // gefühlte Temperatur
+    int gusts = -1;             // Böen km/h
+    String windDir;             // "W", "SO", …
+    String sunrise;             // "07:41"
+    String sunset;
+    std::vector<WeatherHour> hours;   // höchstens 24, ab der laufenden Stunde
+    std::vector<WeatherDay> days;     // höchstens 7, ab heute
 };
 
 String fetchWeather(Weather &weather);

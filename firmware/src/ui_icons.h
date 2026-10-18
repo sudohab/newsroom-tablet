@@ -11,6 +11,8 @@
 // eintragen. Fehlt ein Zeichen in der Schrift, zeichnet LVGL ein Kästchen.
 #pragma once
 
+#include <stdint.h>
+
 namespace ui_icons {
 
 constexpr const char *kNews = "\xEE\x8D\x88";       // U+E348 newspaper
@@ -28,5 +30,33 @@ constexpr const char *kPodcast = "\xEE\x87\xBA";    // U+E1FA podcast
 constexpr const char *kAlarm = "\xEE\x80\xBA";      // U+E03A alarm-clock
 constexpr const char *kWifi = "\xEE\x86\xAE";       // U+E1AE wifi
 constexpr const char *kSettings = "\xEE\x85\x94";   // U+E154 settings
+
+// --- Wetter (in ui_icons_32 und ui_icons_22) ---------------------------------
+constexpr const char *kSun = "\xEE\x85\xB8";          // U+E178 sun
+constexpr const char *kCloudSun = "\xEE\x88\x96";     // U+E216 cloud-sun
+constexpr const char *kCloud = "\xEE\x82\x88";        // U+E088 cloud
+constexpr const char *kFog = "\xEE\x88\x94";          // U+E214 cloud-fog
+constexpr const char *kDrizzle = "\xEE\x82\x8A";      // U+E08A cloud-drizzle
+constexpr const char *kRain = "\xEE\x82\x8E";         // U+E08E cloud-rain
+constexpr const char *kSnow = "\xEE\x82\x90";         // U+E090 cloud-snow
+constexpr const char *kThunder = "\xEE\x82\x8C";      // U+E08C cloud-lightning
+
+// Symbol und Farbe zu einem WMO-Wettercode (open-meteo). Unbekannt (-1)
+// ergibt eine graue Wolke statt eines leeren Feldes.
+struct WeatherIcon {
+    const char *glyph;
+    uint32_t color;
+};
+
+inline WeatherIcon weatherIcon(int wmo) {
+    if (wmo == 0) return {kSun, 0xffd60a};
+    if (wmo == 1 || wmo == 2) return {kCloudSun, 0xffd60a};
+    if (wmo == 45 || wmo == 48) return {kFog, 0x8e8e93};
+    if (wmo >= 51 && wmo <= 57) return {kDrizzle, 0x64a8ff};
+    if ((wmo >= 61 && wmo <= 67) || (wmo >= 80 && wmo <= 82)) return {kRain, 0x64a8ff};
+    if ((wmo >= 71 && wmo <= 77) || wmo == 85 || wmo == 86) return {kSnow, 0xffffff};
+    if (wmo >= 95 && wmo <= 99) return {kThunder, 0xff9f0a};
+    return {kCloud, 0xc7c7cc};   // 3 = bedeckt, und alles Unbekannte
+}
 
 }  // namespace ui_icons

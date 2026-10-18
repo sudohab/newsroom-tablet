@@ -17,6 +17,15 @@ String take(JsonVariantConst value, size_t maxLen = 120) {
     return text;
 }
 
+// Zahl aus dem JSON nur übernehmen, wenn sie im erwarteten Bereich liegt –
+// sonst gilt der Wert als unbekannt. Schützt die Anzeige vor Unsinn wie
+// 5000 °C oder 300 % Regen (beschädigte Antwort, Fehler auf dem Pi).
+int takeInt(JsonVariantConst value, int low, int high, int unknown) {
+    if (!value.is<int>()) return unknown;
+    const int number = value.as<int>();
+    return (number >= low && number <= high) ? number : unknown;
+}
+
 // Eine Liste holen und auswerten. `parse` bekommt das geprüfte JSON.
 // Spart in jeder Abruffunktion dieselben zehn Zeilen Fehlerbehandlung.
 String fetchList(const char *path, const char *whatFailed,
@@ -69,6 +78,33 @@ String fetchWeather(Weather &weather) {
     weather.wind = w["wind"] | -1;
     weather.humidity = w["humidity"] | -1;
     weather.dayText = take(w["day_text"], 60);
+
+    // Details und Vorschau für die Seite „Wetter“. Fehlt etwas (ältere
+    // newsroom21-Fassung), bleibt es leer und die Seite zeigt „–“.
+    weather.feels = takeInt(w["feels"], -60, 60, kNoTemp);
+    weather.gusts = takeInt(w["gusts"], 0, 300, -1);
+    weather.windDir = take(w["wind_dir"], 2);
+    weather.sunrise = take(w["sunrise"], 5);
+    weather.sunset = take(w["sunset"], 5);
+    for (JsonObjectConst entry : w["hourly"].as<JsonArrayConst>()) {
+        if (weather.hours.size() >= 24) break;
+        WeatherHour hour;
+        hour.hour = take(entry["h"], 2);
+        hour.temp = takeInt(entry["t"], -60, 60, kNoTemp);
+        hour.rain = takeInt(entry["r"], 0, 100, -1);
+        hour.wmo = takeInt(entry["w"], 0, 99, -1);
+        if (!hour.hour.isEmpty() && hour.temp != kNoTemp) weather.hours.push_back(hour);
+    }
+    for (JsonObjectConst entry : w["daily"].as<JsonArrayConst>()) {
+        if (weather.days.size() >= 7) break;
+        WeatherDay day;
+        day.name = take(entry["d"], 6);
+        day.max = takeInt(entry["max"], -60, 60, kNoTemp);
+        day.min = takeInt(entry["min"], -60, 60, kNoTemp);
+        day.rain = takeInt(entry["r"], 0, 100, -1);
+        day.wmo = takeInt(entry["w"], 0, 99, -1);
+        if (!day.name.isEmpty() && day.max != kNoTemp && day.min != kNoTemp) weather.days.push_back(day);
+    }
     return String();
 }
 

@@ -6,7 +6,7 @@
 #include "ui_pages.h"
 #include "ui_theme.h"
 
-// Die Anzeigeseiten: Wetter, Termine, Nachrichten, Warnungen, Anrufe.
+// Die Anzeigeseiten: Termine, Nachrichten, Warnungen, Anrufe.
 //
 // Alle sind gleich gebaut: Beim Öffnen wird einmal geholt, danach nur noch
 // nach einer Weile erneut. Geholt wird in `work()` – also aus der
@@ -52,77 +52,8 @@ struct ListPage {
 
 }  // namespace
 
-// ---------------------------------------------------------------------------
-// Wetter
-// ---------------------------------------------------------------------------
-namespace weather {
-namespace {
-lv_obj_t *page = nullptr;
-lv_obj_t *labelNow = nullptr;
-lv_obj_t *labelCondition = nullptr;
-lv_obj_t *labelRange = nullptr;
-lv_obj_t *labelRain = nullptr;
-lv_obj_t *labelWind = nullptr;
-lv_obj_t *labelHumidity = nullptr;
-lv_obj_t *status = nullptr;
-uint32_t lastFetchMs = 0;
-bool needsRefresh = true;
-
-// Ein Wert mit Beschriftung darunter – vier davon nebeneinander.
-lv_obj_t *makeValue(lv_obj_t *parent, lv_coord_t x, lv_coord_t y, const char *caption) {
-    makeLabel(parent, &ui_font_18, kTextMuted, LV_ALIGN_TOP_LEFT, x, y, caption);
-    return makeLabel(parent, &ui_font_30, kText, LV_ALIGN_TOP_LEFT, x, y + 24, "–");
-}
-}  // namespace
-
-lv_obj_t *create(lv_obj_t *parent) {
-    page = makeSection(parent, 0, 0, kWidth, kHeight);
-    makeTitle(page, "Wetter Bamberg");
-    status = makeStatus(page);
-
-    // Die aktuelle Temperatur groß, alles andere klein darunter.
-    labelNow = makeLabel(page, &ui_font_56, kText, LV_ALIGN_TOP_LEFT, 0, 50, "–");
-    labelCondition = makeLabel(page, &ui_font_30, kTextMuted, LV_ALIGN_TOP_LEFT, 0, 118, "");
-
-    makeSeparator(page, 0, 170, kWidth, 1);
-
-    labelRange = makeValue(page, 0, 190, "HEUTE");
-    labelRain = makeValue(page, 200, 190, "REGEN");
-    labelWind = makeValue(page, 400, 190, "WIND");
-    labelHumidity = makeValue(page, 570, 190, "FEUCHTE");
-    return page;
-}
-
-void activate() { needsRefresh = true; }
-
-void work() {
-    const uint32_t now = millis();
-    if (!needsRefresh && now - lastFetchMs < kRefreshMs) return;
-    needsRefresh = false;
-    lastFetchMs = now;
-
-    tablet_data::Weather weather;
-    const String error = tablet_data::fetchWeather(weather);
-
-    lvgl_port_lock(-1);
-    if (!error.isEmpty() || !weather.valid) {
-        lv_label_set_text(status, error.isEmpty() ? "Keine Daten" : error.c_str());
-    } else {
-        lv_label_set_text(status, "");
-        lv_label_set_text(labelNow, (String(weather.temp, 1) + " °C").c_str());
-        lv_label_set_text(labelCondition, weather.text.c_str());
-        lv_label_set_text(labelRange, (String(weather.tempMin) + " bis "
-                                       + String(weather.tempMax) + " °C").c_str());
-        lv_label_set_text(labelRain, weather.rainProbability >= 0
-                              ? (String(weather.rainProbability) + " %").c_str() : "–");
-        lv_label_set_text(labelWind, weather.wind >= 0
-                              ? (String(weather.wind) + " km/h").c_str() : "–");
-        lv_label_set_text(labelHumidity, weather.humidity >= 0
-                              ? (String(weather.humidity) + " %").c_str() : "–");
-    }
-    lvgl_port_unlock();
-}
-}  // namespace weather
+// Wetter: eigene Datei ui_page_weather.cpp (seit 0.8.0 mit Stunden, 7 Tagen
+// und Temperaturkurve).
 
 // ---------------------------------------------------------------------------
 // Termine: links der Monat, rechts die Liste

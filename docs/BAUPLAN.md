@@ -1253,3 +1253,32 @@ prüft die SHA-256-Prüfsumme, bevor es die Schrift erzeugt. Zuordnung
 Symbol → Zeichen in `ui_icons.h`.
 
 Gebaut (Flash 57,9 %), am Gerät noch nicht gesehen.
+
+### 2026-10-18 — 0.8.0: Wetter-Seite mit Stunden, 7 Tagen und Kurve
+
+Hannes wählte aus vier Entwürfen „A“ (jetzt + 12 Stunden + 7 Tage) und
+wollte, dass ein Tipp auf „Heute“ die Kurve aus „B“ zeigt. Neue Datei
+`ui_page_weather.cpp` (der alte Block in `ui_pages_info.cpp` ist entfernt):
+
+* **Übersicht:** links Symbol, Temperatur, Wetterlage, „gefühlt … · Wind …“;
+  rechts 12 Spalten (Stunde, Symbol, Temperatur, Regen ab 1 %); unten 7
+  Tageskästchen (Symbol, Höchst-/Tiefstwert per LVGL-Recolor, Regen).
+  „Heute ›“ ist ein Knopf.
+* **Verlauf:** links Spanne, gefühlt, Wind + Richtung, Böen, Sonnenzeiten;
+  rechts eine `lv_line` mit 24 Punkten (Spanne mindestens 4 °C), Höchst- und
+  Tiefstwert markiert, Regenbalken (100 % = 40 px), Uhrzeiten alle drei
+  Stunden. „‹ 7 Tage“ zurück; beim erneuten Öffnen der Seite steht immer die
+  Übersicht.
+* **Daten:** `tablet_data::Weather` hat `hours` (≤ 24), `days` (≤ 7), `feels`,
+  `gusts`, `windDir`, `sunrise`, `sunset`. Jede Zahl wird auf ihren Bereich
+  geprüft (`takeInt`: Temperatur −60…60, Regen 0…100, Code 0…99), sonst gilt
+  sie als unbekannt. Fehlen die Felder (älteres newsroom21), bleibt die
+  Vorschau leer und die Seite zeigt „–“.
+* **Symbole:** 8 Wettersymbole aus Lucide in `ui_icons_32` und neu
+  `ui_icons_22` (nur Wetter, für die Stundenleiste); Zuordnung WMO → Symbol
+  und Farbe in `ui_icons::weatherIcon()`. Die Kopfzeile zeigt weiter Wörter
+  (`weatherSymbol`).
+
+Gegenstelle: newsroom21 vom 18.10.2026 (Open-Meteo `hourly`, `daily` mit
+`forecast_days=7`, `sunrise`/`sunset`, `apparent_temperature`,
+`wind_gusts_10m`, `wind_direction_10m`). Gebaut, am Gerät ungetestet.
