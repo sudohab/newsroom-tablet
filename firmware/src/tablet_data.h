@@ -166,11 +166,21 @@ struct Timer {
     int remaining = 0;    // Sekunden
     String state;         // "idle", "running", "paused", "expired"
     bool repeat = false;
+    String device = "pi"; // Abspielgerät: "pi" oder Kennung einer Matrix-Uhr
 };
 
-String fetchTimers(std::vector<Timer> &timers, int &maxTimers);
+// Ein wählbares Abspielgerät für Timer (ab 0.11.0): der Pi und jede
+// Matrix-Uhr mit Lautsprecher. Die Liste liefert der Pi mit den Timern.
+struct TimerDevice {
+    String id;
+    String name;
+};
 
-String createTimer(int seconds, const String &label, bool repeat);
+String fetchTimers(std::vector<Timer> &timers, int &maxTimers,
+                   std::vector<TimerDevice> &devices);
+
+String createTimer(int seconds, const String &label, bool repeat, const String &device);
+String setTimerDevice(const String &id, const String &device);
 String startTimer(const String &id);
 String pauseTimer(const String &id);
 String stopTimer(const String &id);

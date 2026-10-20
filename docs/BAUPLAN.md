@@ -1331,3 +1331,15 @@ Mehr als 15 Steckdosen: Knöpfe „‹“/„›“ und „Seite 1/2“ neben de
 Überschrift, sonst unsichtbar. Der Pi liefert bis zu 45 (drei Seiten,
 Antwort < 16 KB), das Tablet nimmt ebenfalls höchstens 45 an.
 Gebaut (Flash 58,5 %), per OTA bereitgelegt, am Gerät ungetestet.
+
+### 2026-10-20 — 0.11.0: Abspielgerät je Timer
+
+Jeder Timer-Platz hat einen Knopf „Ton: …“ (Pi oder Matrix-Uhr mit
+Lautsprecher; Liste `devices` aus `/api/tablet/timers`). Jeder Tipp schaltet
+zum nächsten Gerät. Leerer Platz: Knopf unten (y 204, wo sonst „Wdh/Weg“
+stehen), gilt für den nächsten Start. Angelegter Timer: Knopf oben anstelle
+von „+1/+5“ (y 66), ändert das Gerät sofort per `timer_device` – auch
+während es klingelt. Gibt es nur den Pi, ist der Knopf ausgegraut. Die
+Gerätekennung wird vor dem Einsetzen ins JSON geprüft (`pi` oder a–z, 0–9,
+Bindestrich). Ältere newsroom21 ohne `devices`: nur der Pi, „device“ wird
+beim Anlegen weggelassen. Gebaut (Flash 58,6 %), per OTA bereit, ungetestet.

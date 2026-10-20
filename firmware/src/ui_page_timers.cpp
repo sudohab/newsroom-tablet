@@ -25,6 +25,12 @@
 // „Wdh" (Wiederholen) heißt: Nach dem Abstellen läuft der Timer sofort wieder
 // von vorn. Es startet ihn nicht beim Ablaufen von selbst neu – sonst liefe
 // der nächste Durchgang, während der Ton noch klingelt.
+//
+// „Ton: …“ (ab 0.11.0) wählt das Abspielgerät: den Pi oder eine Matrix-Uhr
+// mit Lautsprecher. Jeder Tipp schaltet zum nächsten Gerät. Am leeren Platz
+// steht der Knopf unten (dort, wo später „Wdh/Weg“ sind) und gilt für den
+// nächsten Start; bei einem angelegten Timer steht er oben anstelle von
+// „+1/+5“ und ändert das Gerät sofort – auch während es klingelt.
 
 namespace ui_pages {
 namespace timers {
@@ -47,7 +53,7 @@ constexpr uint32_t kRefreshMs = 10000;
 // dann nicht weiter alle zehn Sekunden anklopfen.
 constexpr uint32_t kRetryMs = 60000;
 
-enum class Job { None, Load, Create, Start, Pause, Stop, Delete, Repeat };
+enum class Job { None, Load, Create, Start, Pause, Stop, Delete, Repeat, Device };
 volatile Job job = Job::None;
 
 lv_obj_t *page = nullptr;
@@ -66,6 +72,7 @@ struct Slot {
     lv_obj_t *bottomBar = nullptr;   // [Wdh] [Löschen]
     lv_obj_t *repeatButton = nullptr;
     lv_obj_t *deleteButton = nullptr;
+    lv_obj_t *deviceButton = nullptr; // „Ton: …“ – Abspielgerät
 };
 Slot slots[kSlots];
 
@@ -74,6 +81,12 @@ int maxTimers = kSlots;
 
 // Dauer, die an einem leeren Platz zusammengeklickt wurde (Sekunden).
 int pending[kSlots] = {0, 0, 0, 0};
+
+// Wählbare Abspielgeräte (kommen mit der Timerliste vom Pi) und das am
+// leeren Platz gewählte (Index in `devices`, 0 = Pi).
+std::vector<tablet_data::TimerDevice> devices = {{"pi", "newsroom-Pi"}};
+int pendingDevice[kSlots] = {0, 0, 0, 0};
+String jobDevice;   // Ziel von Job::Device
 
 int jobSlot = -1;
 uint32_t lastFetchMs = 0;
@@ -179,6 +192,29 @@ void onDelete(lv_event_t *event) {
     job = Job::Delete;
 }
 
+// Index des Geräts in der Liste – unbekannte (z. B. entfernte Uhr) zählen als Pi.
+int deviceIndex(const String &id) {
+    for (size_t i = 0; i < devices.size(); ++i) {
+        if (devices[i].id == id) return static_cast<int>(i);
+    }
+    return 0;
+}
+
+void onDevice(lv_event_t *event) {
+    const int slot = slotOf(event);
+    if (slot < 0 || slot >= kSlots || devices.size() < 2) return;
+    const tablet_data::Timer *timer = timerAt(slot);
+    if (timer == nullptr) {
+        pendingDevice[slot] = (pendingDevice[slot] + 1) % static_cast<int>(devices.size());
+        redraw();
+        return;
+    }
+    const int next = (deviceIndex(timer->device) + 1) % static_cast<int>(devices.size());
+    jobDevice = devices[next].id;
+    jobSlot = slot;
+    job = Job::Device;
+}
+
 void onRepeat(lv_event_t *event) {
     const int slot = slotOf(event);
     if (slot < 0 || slot >= kSlots || timerAt(slot) == nullptr) return;
@@ -246,6 +282,15 @@ void redraw() {
             setButton(slot.secondary, "Stopp", false, 0);
         }
 
+        // „Ton: …“: am leeren Platz unten, beim angelegten Timer oben.
+        const int device = empty ? pendingDevice[i] % static_cast<int>(devices.size())
+                                 : deviceIndex(timer->device);
+        const String deviceText = "Ton: " + devices[device].name;
+        setButton(slot.deviceButton, deviceText.c_str(), true, 0);
+        lv_obj_set_y(slot.deviceButton, empty ? 204 : 66);
+        if (devices.size() < 2) lv_obj_add_state(slot.deviceButton, LV_STATE_DISABLED);
+        else lv_obj_clear_state(slot.deviceButton, LV_STATE_DISABLED);
+
         if (empty) {
             lv_obj_add_flag(slot.bottomBar, LV_OBJ_FLAG_HIDDEN);
         } else {
@@ -302,6 +347,13 @@ lv_obj_t *create(lv_obj_t *parent) {
                              reinterpret_cast<void *>(static_cast<intptr_t>(i)));
         lv_obj_set_user_data(slot.deleteButton,
                              reinterpret_cast<void *>(static_cast<intptr_t>(i)));
+
+        slot.deviceButton = addSlotButton(slot.box, "Ton: newsroom-Pi", onDevice, i, kSlotWidth, 204);
+        // Lange Uhrennamen mit „…“ kürzen statt über den Knopf hinaus.
+        lv_obj_t *deviceLabel = lv_obj_get_child(slot.deviceButton, 0);
+        lv_obj_set_width(deviceLabel, kSlotWidth - 16);
+        lv_label_set_long_mode(deviceLabel, LV_LABEL_LONG_DOT);
+        lv_obj_set_style_text_align(deviceLabel, LV_TEXT_ALIGN_CENTER, 0);
     }
 
     redraw();
@@ -358,12 +410,15 @@ void work() {
         case Job::Create:
             // Anlegen und starten in einem Zug: Auf dem Gerät ist „Start" ein
             // Druck, auch wenn der Pi zwei Schritte kennt.
-            message = tablet_data::createTimer(pending[jobSlot], String(), false);
+            message = tablet_data::createTimer(
+                pending[jobSlot], String(), false,
+                devices[pendingDevice[jobSlot] % static_cast<int>(devices.size())].id);
             if (message.isEmpty()) {
                 pending[jobSlot] = 0;
+                pendingDevice[jobSlot] = 0;
                 // Der neue Timer steht am Ende der Liste – also erst holen,
                 // dann starten.
-                message = tablet_data::fetchTimers(timers, maxTimers);
+                message = tablet_data::fetchTimers(timers, maxTimers, devices);
                 const tablet_data::Timer *fresh = timers.empty() ? nullptr : &timers.back();
                 if (message.isEmpty() && fresh != nullptr) {
                     message = tablet_data::startTimer(fresh->id);
@@ -375,12 +430,13 @@ void work() {
         case Job::Stop:   message = tablet_data::stopTimer(id); break;
         case Job::Delete: message = tablet_data::deleteTimer(id); break;
         case Job::Repeat: message = tablet_data::setTimerRepeat(id, !timer->repeat); break;
-        case Job::Load:   reload = false; message = tablet_data::fetchTimers(timers, maxTimers); break;
+        case Job::Device: message = tablet_data::setTimerDevice(id, jobDevice); break;
+        case Job::Load:   reload = false; message = tablet_data::fetchTimers(timers, maxTimers, devices); break;
         case Job::None:   return;
     }
 
     if (reload && message.isEmpty()) {
-        message = tablet_data::fetchTimers(timers, maxTimers);
+        message = tablet_data::fetchTimers(timers, maxTimers, devices);
     }
     if (current == Job::Load || message.isEmpty()) {
         loaded = true;

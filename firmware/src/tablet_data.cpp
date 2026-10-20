@@ -417,9 +417,21 @@ String timerAction(const char *action, const String &id, const String &extra = S
                      : (result.error.isEmpty() ? String("Timer nicht erreichbar") : result.error);
 }
 
+// Abspielgerät: "pi" oder Kennung einer Uhr (a–z, 0–9, Bindestrich) – wie
+// auf dem Pi geprüft. So kann nie ein Anführungszeichen ins JSON geraten.
+bool looksLikeDevice(const String &id) {
+    if (id.isEmpty() || id.length() > 32) return false;
+    for (size_t i = 0; i < id.length(); ++i) {
+        const char c = id[i];
+        if (!(isDigit(c) || (c >= 'a' && c <= 'z') || c == '-')) return false;
+    }
+    return true;
+}
+
 }  // namespace
 
-String fetchTimers(std::vector<Timer> &timers, int &maxTimers) {
+String fetchTimers(std::vector<Timer> &timers, int &maxTimers,
+                   std::vector<TimerDevice> &devices) {
     timers.clear();
     maxTimers = 4;
     JsonDocument filter;
@@ -430,6 +442,9 @@ String fetchTimers(std::vector<Timer> &timers, int &maxTimers) {
     filter["timers"][0]["remaining"] = true;
     filter["timers"][0]["state"] = true;
     filter["timers"][0]["repeat"] = true;
+    filter["timers"][0]["device"] = true;
+    filter["devices"][0]["id"] = true;
+    filter["devices"][0]["name"] = true;
 
     const api_client::Result result = api_client::get("/api/tablet/timers");
     if (!result.ok) {
@@ -448,13 +463,27 @@ String fetchTimers(std::vector<Timer> &timers, int &maxTimers) {
         timer.remaining = entry["remaining"] | 0;
         timer.state = take(entry["state"], 10);
         timer.repeat = entry["repeat"] | false;
+        const String device = take(entry["device"], 32);
+        timer.device = looksLikeDevice(device) ? device : String("pi");
         if (!timer.id.isEmpty()) timers.push_back(timer);
         if (static_cast<int>(timers.size()) >= maxTimers) break;
+    }
+    // Geräteliste: fehlt sie (älteres newsroom21), bleibt nur der Pi.
+    devices.clear();
+    for (JsonObjectConst entry : doc["devices"].as<JsonArrayConst>()) {
+        TimerDevice device;
+        device.id = take(entry["id"], 32);
+        device.name = take(entry["name"], 24);
+        if (looksLikeDevice(device.id) && !device.name.isEmpty()) devices.push_back(device);
+        if (devices.size() >= 8) break;
+    }
+    if (devices.empty() || devices.front().id != "pi") {
+        devices.insert(devices.begin(), TimerDevice{"pi", "newsroom-Pi"});
     }
     return String();
 }
 
-String createTimer(int seconds, const String &label, bool repeat) {
+String createTimer(int seconds, const String &label, bool repeat, const String &device) {
     // Dieselben Grenzen wie im Pi. Das Geraet soll gar nicht erst Unsinn
     // schicken, auch wenn der Server ihn ohnehin abweisen wuerde.
     if (seconds < 10 || seconds > 24 * 3600) return "Dauer ausserhalb des Bereichs";
@@ -462,6 +491,7 @@ String createTimer(int seconds, const String &label, bool repeat) {
     if (!label.isEmpty()) json += ",\"label\":" + quoted(label);
     json += ",\"repeat\":";
     json += repeat ? "true" : "false";
+    if (looksLikeDevice(device) && device != "pi") json += ",\"device\":" + quoted(device);
     json += "}";
     const api_client::Result result = api_client::postJson("/api/tablet/action", json);
     return result.ok ? String()
@@ -472,6 +502,11 @@ String startTimer(const String &id)  { return timerAction("timer_start", id); }
 String pauseTimer(const String &id)  { return timerAction("timer_pause", id); }
 String stopTimer(const String &id)   { return timerAction("timer_stop", id); }
 String deleteTimer(const String &id) { return timerAction("timer_delete", id); }
+
+String setTimerDevice(const String &id, const String &device) {
+    if (!looksLikeDevice(device)) return "Unbekanntes Gerät";
+    return timerAction("timer_device", id, "\"device\":" + quoted(device));
+}
 
 String setTimerRepeat(const String &id, bool repeat) {
     return timerAction("timer_repeat", id,
