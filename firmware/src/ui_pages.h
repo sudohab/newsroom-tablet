@@ -45,6 +45,11 @@ struct Page {
     // tastatur: Sie hängt am Bildschirm statt an der Seite -- sonst wäre sie
     // abgeschnitten -- und muss deshalb beim Wechseln selbst verschwinden.
     void (*deactivate)() = nullptr;
+    // Übergeordnete Seite (deren create-Funktion), nullptr = Startseite.
+    // Seiten ohne eigene Kachel (Radio, Podcast, WLAN) erreicht man über eine
+    // andere Seite; der Knopf unten links führt dann dorthin zurück
+    // („‹ Multimedia“ statt „‹ Start“).
+    lv_obj_t *(*parent)(lv_obj_t *parent) = nullptr;
 };
 
 // Alle Seiten: zuerst die Startseite, danach in der Reihenfolge der Kacheln.
@@ -53,6 +58,9 @@ int count();
 
 // Die Nummer der Startseite (wird gesucht statt fest eingetragen).
 int homeIndex();
+
+// Die Nummer einer Seite anhand ihrer create-Funktion, -1 = gibt es nicht.
+int indexOf(lv_obj_t *(*create)(lv_obj_t *parent));
 
 // --- Die einzelnen Seiten ---------------------------------------------------
 namespace home {
@@ -102,6 +110,20 @@ lv_obj_t *create(lv_obj_t *parent);
 void activate();
 void work();
 }  // namespace podcasts
+
+// Radio und Podcast unter einer Kachel (ab 0.9.0)
+namespace multimedia {
+lv_obj_t *create(lv_obj_t *parent);
+void activate();
+void work();
+}  // namespace multimedia
+
+// Steckdosen ein/aus (ab 0.9.0)
+namespace smarthome {
+lv_obj_t *create(lv_obj_t *parent);
+void activate();
+void work();
+}  // namespace smarthome
 
 namespace alarms {
 lv_obj_t *create(lv_obj_t *parent);

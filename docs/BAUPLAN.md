@@ -1282,3 +1282,40 @@ wollte, dass ein Tipp auf „Heute“ die Kurve aus „B“ zeigt. Neue Datei
 Gegenstelle: newsroom21 vom 18.10.2026 (Open-Meteo `hourly`, `daily` mit
 `forecast_days=7`, `sunrise`/`sunset`, `apparent_temperature`,
 `wind_gusts_10m`, `wind_direction_10m`). Gebaut, am Gerät ungetestet.
+
+### 2026-10-20 — 0.9.0: Multimedia, Smart Home, WLAN unter „Gerät“
+
+Hannes wollte die Steckdosen (newsroom21: Gateway `smarthome`) auch am Tablet
+schalten und hat dafür Platz geschaffen: Radio und Podcast unter einer
+Kachel „Multimedia“, WLAN unter „Gerät“. Das Raster hat jetzt 14 Kacheln:
+
+    News · Wetter · Warnungen · Termine · Signal
+    Anrufe · Uhren · Timer · Kamera · Drucker
+    Multimedia · Smart Home · Wecker · Gerät
+
+* **Seiten ohne Kachel:** Radio, Podcast und WLAN stehen am Ende von `kPages`
+  ohne Symbol und nennen ihre übergeordnete Seite (neues Feld
+  `Page::parent`). Der Knopf unten links heißt dann „‹ Multimedia“ bzw.
+  „‹ Gerät“ und führt dorthin (`ui.cpp`, `backTarget`, Knopf 210 px breit).
+  `kMaxPages` 16 → 20 (jetzt 18 Seiten). Neu: `ui_pages::indexOf(create)`.
+* **Multimedia** (`ui_page_multimedia.cpp`): zwei große Flächen Radio/Podcast
+  mit dem laufenden Titel, darunter „Läuft: …“ und „Stopp“ (`media_stop`).
+  Holt nichts selbst, zeichnet nur bei Änderung des Medienzustands.
+* **Smart Home** (`ui_page_smarthome.cpp`): bis zu acht Karten (2 × 4) mit
+  Name, Watt bzw. an/aus, Schalter. Ein Tipp auf die Karte schaltet; der
+  Schalter zeigt den Wunsch sofort, der echte Stand kommt danach vom Pi
+  (alle 5 s, nach jedem Schalten sofort). Fehler als Satz (502 „Steckdose
+  antwortet nicht“, 403 „nicht freigegeben“). `GET /api/tablet/smarthome`,
+  Aktion `smarthome_switch` mit `device_id` + `enabled`; die ID wird vor dem
+  Einsetzen ins JSON geprüft (`tuya-`/`fritz-` + Buchstaben/Ziffern).
+* **Kacheln:** Multimedia zeigt den laufenden Titel, Smart Home „2 an“ /
+  „alle aus“ (`smarthome{on,total}` aus `/api/tablet/state`), Gerät
+  „Anzeige · WLAN“ bzw. rot „WLAN getrennt“.
+* **Gerät:** Knopf „WLAN ›“ neben der Überschrift (unten ist kein Platz).
+* **Symbole:** `music` (U+E122) und `house-plug` (U+E5F0) in `ui_icons_32`.
+  Nur die Symbolschrift wurde neu erzeugt – `build_fonts.sh` lädt Montserrat
+  ungepinnt von GitHub `master`, die Textschriften blieben deshalb unberührt.
+* Hinweistext ohne „→“: U+2192 fehlt in den Schriften (Kästchen), „›“ ist drin.
+
+Gebaut (Flash 58,5 %), per `scripts/release.sh` als 0.9.0 (Build
+2026102001) nach newsroom21 gelegt. Am Gerät noch nicht gesehen.

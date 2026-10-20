@@ -68,11 +68,11 @@ tar -xzf "$ARBEIT/lucide.tgz" -C "$ARBEIT" package/font/lucide.ttf
 #   e348 newspaper  e216 cloud-sun  e193 triangle-alert  e063 calendar
 #   e116 message-circle  e133 phone  e087 clock  e1e0 timer  e064 camera
 #   e141 printer  e142 radio  e1fa podcast  e03a alarm-clock  e1ae wifi
-#   e154 settings
+#   e154 settings  e122 music (Multimedia, ab 0.9.0)  e5f0 house-plug (Smart Home)
 # Wetter (Seite „Wetter“, ab 0.8.0) – auch in 22 px für die Stundenleiste:
 #   e178 sun  e216 cloud-sun  e088 cloud  e214 cloud-fog  e08a cloud-drizzle
 #   e08e cloud-rain  e090 cloud-snow  e08c cloud-lightning
-SYMBOLE="0xe348,0xe216,0xe193,0xe063,0xe116,0xe133,0xe087,0xe1e0,0xe064,0xe141,0xe142,0xe1fa,0xe03a,0xe1ae,0xe154"
+SYMBOLE="0xe348,0xe216,0xe193,0xe063,0xe116,0xe133,0xe087,0xe1e0,0xe064,0xe141,0xe142,0xe1fa,0xe03a,0xe1ae,0xe154,0xe122,0xe5f0"
 WETTER="0xe178,0xe216,0xe088,0xe214,0xe08a,0xe08e,0xe090,0xe08c"
 npx --yes lv_font_conv@1.5.2 \
   --font "$ARBEIT/package/font/lucide.ttf" -r "$SYMBOLE,$WETTER" \

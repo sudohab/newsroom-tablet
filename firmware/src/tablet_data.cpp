@@ -763,4 +763,67 @@ String cameraStream(const String &cameraId, bool on) {
     return result.ok ? String() : (result.error.isEmpty() ? String("Umschalten fehlgeschlagen") : result.error);
 }
 
+// --- Steckdosen ---------------------------------------------------------------
+
+namespace {
+
+// Steckdosen-ID aus der Antwort des Pi, bevor sie in eine Anfrage zurückgeht:
+// „tuya-“ oder „fritz-“ und danach nur Buchstaben/Ziffern (wie auf dem Pi,
+// schemas.SMARTHOME_DEVICE_ID). So kann nie ein Anführungszeichen in das
+// JSON der Aktion geraten.
+bool looksLikePlugId(const String &id) {
+    int start = 0;
+    if (id.startsWith("tuya-")) start = 5;
+    else if (id.startsWith("fritz-")) start = 6;
+    else return false;
+    const int rest = static_cast<int>(id.length()) - start;
+    if (rest < 1 || rest > 40) return false;
+    for (size_t i = start; i < id.length(); ++i) {
+        if (!isAlphaNumeric(id[i])) return false;
+    }
+    return true;
+}
+
+}  // namespace
+
+String fetchPlugs(std::vector<Plug> &plugs) {
+    plugs.clear();
+    JsonDocument filter;
+    filter["devices"][0]["id"] = true;
+    filter["devices"][0]["name"] = true;
+    filter["devices"][0]["kind"] = true;
+    filter["devices"][0]["online"] = true;
+    filter["devices"][0]["on"] = true;
+    filter["devices"][0]["w"] = true;
+    return fetchList("/api/tablet/smarthome", "Steckdosen nicht abrufbar", filter,
+                     [](JsonDocument &doc, void *raw) {
+        auto *out = static_cast<std::vector<Plug> *>(raw);
+        for (JsonObjectConst entry : doc["devices"].as<JsonArrayConst>()) {
+            Plug plug;
+            plug.id = take(entry["id"], 46);
+            plug.name = take(entry["name"], 40);
+            plug.kind = take(entry["kind"], 8);
+            plug.online = entry["online"] | false;
+            JsonVariantConst on = entry["on"];
+            plug.on = on.is<bool>() ? (on.as<bool>() ? 1 : 0) : -1;
+            plug.watts = takeInt(entry["w"], 0, 4000, -1);
+            if (looksLikePlugId(plug.id) && !plug.name.isEmpty()) out->push_back(plug);
+            if (out->size() >= 8) break;   // mehr Karten hat die Seite nicht
+        }
+    }, &plugs);
+}
+
+String switchPlug(const String &plugId, bool on) {
+    if (!looksLikePlugId(plugId)) return "Ungültige Steckdose";
+    const api_client::Result result = api_client::postJson(
+        "/api/tablet/action", "{\"action\":\"smarthome_switch\",\"device_id\":" + quoted(plugId) +
+        ",\"enabled\":" + (on ? "true" : "false") + "}");
+    if (result.ok) return String();
+    // Die häufigen Fälle als Satz statt „Server meldet …“
+    if (result.status == 502) return "Steckdose antwortet nicht";
+    if (result.status == 403) return "Steckdose nicht freigegeben";
+    if (result.status == 503) return "Smart Home nicht verfügbar";
+    return result.error.isEmpty() ? String("Schalten fehlgeschlagen") : result.error;
+}
+
 }  // namespace tablet_data

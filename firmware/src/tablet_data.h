@@ -280,4 +280,20 @@ String fetchCameraFrame(const String &cameraId, int haveSeq,
 String cameraSnapshot(const String &cameraId);
 String cameraStream(const String &cameraId, bool on);
 
+// --- Steckdosen (Seite „Smart Home“, ab 0.9.0) --------------------------------
+// LEDVANCE/Tuya und FRITZ!DECT – geschaltet wird über newsroom21, das Tablet
+// kennt weder Adressen noch Schlüssel. Der Pi liefert nur die Steckdosen, die
+// in der Weboberfläche „auf dem Tablet zeigen“ haben (höchstens acht).
+struct Plug {
+    String id;        // „tuya-…“ oder „fritz-…“
+    String name;
+    String kind;      // „tuya“ oder „fritz“
+    bool online = false;
+    int on = -1;      // 1 an, 0 aus, -1 unbekannt
+    int watts = -1;   // -1 = misst nicht
+};
+
+String fetchPlugs(std::vector<Plug> &plugs);
+String switchPlug(const String &plugId, bool on);
+
 }  // namespace tablet_data

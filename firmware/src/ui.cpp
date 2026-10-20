@@ -31,7 +31,8 @@ constexpr lv_coord_t kContentTop = kHeaderHeight + 10;
 // der Startseite nutzt die ganze Höhe. Alle anderen Seiten sind 300 hoch
 // (wie zu Zeiten der Menüleiste) – darunter liegt der Knopf „‹ Start“.
 constexpr lv_coord_t kContentHeight = 480 - kContentTop - 12;
-constexpr lv_coord_t kBackWidth = 170;
+// Breit genug für „‹  Multimedia“ (die längste übergeordnete Seite)
+constexpr lv_coord_t kBackWidth = 210;
 constexpr lv_coord_t kBackHeight = 50;
 
 lv_obj_t *screen = nullptr;
@@ -48,7 +49,7 @@ lv_obj_t *labelWeatherDetail = nullptr;
 // Seiten-Container, gleiche Reihenfolge wie ui_pages::all().
 // Reichlich bemessen, damit eine neue Seite nicht stillschweigend hinten
 // herausfällt; `begin()` prüft es zusätzlich.
-constexpr int kMaxPages = 16;
+constexpr int kMaxPages = 20;
 lv_obj_t *pageObjects[kMaxPages] = {};
 // -1 = es ist noch keine Seite offen.
 int activePage = -1;
@@ -61,6 +62,15 @@ uint32_t lastClockMs = 0;
 // --- Kopfzeile ---------------------------------------------------------------
 
 void showPage(int index);
+
+// Wohin „zurück“ von dieser Seite führt: zur übergeordneten Seite, sonst zum Start.
+int backTarget(int index) {
+    if (index < 0 || index >= ui_pages::count()) return ui_pages::homeIndex();
+    const ui_pages::Page &page = ui_pages::all()[index];
+    if (page.parent == nullptr) return ui_pages::homeIndex();
+    const int parent = ui_pages::indexOf(page.parent);
+    return parent < 0 ? ui_pages::homeIndex() : parent;
+}
 
 // Ein Tipp auf die Uhrzeit führt ebenfalls zur Startseite – die Uhr ist
 // das, was man auf dem Gerät als Erstes sieht und am leichtesten trifft.
@@ -149,11 +159,16 @@ void showPage(int index) {
         }
     }
     // „‹ Start“ nur auf Unterseiten – auf der Startseite gibt es kein Zurück.
+    // Hat die Seite eine übergeordnete (Radio → Multimedia), heißt der Knopf
+    // nach ihr und führt dorthin.
     if (backButton != nullptr) {
         if (index == ui_pages::homeIndex()) {
             lv_obj_add_flag(backButton, LV_OBJ_FLAG_HIDDEN);
         } else {
             lv_obj_clear_flag(backButton, LV_OBJ_FLAG_HIDDEN);
+            const int parent = backTarget(index);
+            const String text = String("\xE2\x80\xB9  ") + ui_pages::all()[parent].label;
+            lv_label_set_text(lv_obj_get_child(backButton, 0), text.c_str());
         }
     }
     // Die alte Seite aufräumen lassen, bevor die neue kommt.
@@ -166,7 +181,7 @@ void showPage(int index) {
     pendingActivate = index;
 }
 
-void onBackClicked(lv_event_t *) { showPage(ui_pages::homeIndex()); }
+void onBackClicked(lv_event_t *) { showPage(backTarget(activePage)); }
 
 void buildBackButton() {
     // Unten links, wo vorher die Menüleiste war: Dort liegt der Daumen, und

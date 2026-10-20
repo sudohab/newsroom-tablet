@@ -3,6 +3,7 @@
 #include "lvgl_port/lvgl_v8_port.h"
 #include "settings_store.h"
 #include "tablet_config.h"
+#include "ui.h"
 #include "ui_pages.h"
 #include "ui_theme.h"
 
@@ -89,6 +90,13 @@ void onHomeReturnChanged(lv_event_t *event) {
     lv_label_set_text(status, "Gespeichert");
 }
 
+// Seit 0.9.0 hat WLAN keine eigene Kachel mehr – es geht von hier aus hin
+// (und mit „‹ Gerät“ wieder zurück).
+void onWifiClicked(lv_event_t *) {
+    const int index = indexOf(wifi::create);
+    if (index >= 0) ui::openPage(index);
+}
+
 void onOffNow(lv_event_t *) {
     // Sofort abschalten. Die nächste Berührung weckt wieder auf und wird
     // dabei nicht als Bedienung gewertet.
@@ -136,6 +144,8 @@ lv_obj_t *create(lv_obj_t *parent) {
     page = makeSection(parent, 0, 0, kWidth, kHeight);
     makeTitle(page, "Einstellungen");
     status = makeStatus(page);
+    // Neben der Überschrift (die ist rund 190 px breit); unten ist kein Platz.
+    makeButton(page, "WLAN \xE2\x80\xBA", onWifiClicked, 150, 40, LV_ALIGN_TOP_LEFT, 230, 0);
 
     // --- links: wann geht der Bildschirm aus? -----------------------------
     // Eine gemeinsame Ueberschrift, darunter zwei kurze. Lange Ueberschriften

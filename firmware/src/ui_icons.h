@@ -30,6 +30,8 @@ constexpr const char *kPodcast = "\xEE\x87\xBA";    // U+E1FA podcast
 constexpr const char *kAlarm = "\xEE\x80\xBA";      // U+E03A alarm-clock
 constexpr const char *kWifi = "\xEE\x86\xAE";       // U+E1AE wifi
 constexpr const char *kSettings = "\xEE\x85\x94";   // U+E154 settings
+constexpr const char *kMultimedia = "\xEE\x84\xA2"; // U+E122 music (ab 0.9.0)
+constexpr const char *kSmartHome = "\xEE\x97\xB0";  // U+E5F0 house-plug (ab 0.9.0)
 
 // --- Wetter (in ui_icons_32 und ui_icons_22) ---------------------------------
 constexpr const char *kSun = "\xEE\x85\xB8";          // U+E178 sun

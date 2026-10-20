@@ -88,6 +88,8 @@ JsonDocument makeFilter() {
     filter["printer"]["file"] = true;
     filter["printer"]["progress"] = true;
     filter["printer"]["remaining"] = true;
+    filter["smarthome"]["on"] = true;
+    filter["smarthome"]["total"] = true;
     filter["firmware"] = true;
     return filter;
 }
@@ -191,6 +193,13 @@ void parse(const String &body) {
     next.printerProgress = constrain(printer["progress"] | -1, -1, 100);
     next.printerRemaining = constrain(printer["remaining"] | -1, -1, 30 * 24 * 3600);
 
+    // Steckdosen: fehlt der Block, ist nichts eingerichtet (beide -1).
+    JsonObjectConst plugs = doc["smarthome"];
+    if (!plugs.isNull()) {
+        next.smarthomeTotal = constrain(plugs["total"] | -1, -1, 99);
+        next.smarthomeOn = constrain(plugs["on"] | -1, -1, next.smarthomeTotal);
+    }
+
     // Nach „Installieren“ in der Weboberfläche: das Manifest. Geprüft wird
     // es erst in ota::handleOffer (Modell, Build-Nummer, Signatur).
     JsonObjectConst firmware = doc["firmware"];
@@ -231,6 +240,8 @@ void parse(const String &body) {
         && next.washerDone == snapshot.washerDone
         && next.printerState == snapshot.printerState
         && next.printerProgress == snapshot.printerProgress
+        && next.smarthomeOn == snapshot.smarthomeOn
+        && next.smarthomeTotal == snapshot.smarthomeTotal
         && next.printerRemaining / 60 == snapshot.printerRemaining / 60;
 
     // Die Listen getrennt vergleichen: Sie kosten beim Neuaufbau am meisten.

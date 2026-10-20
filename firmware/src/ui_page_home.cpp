@@ -237,14 +237,22 @@ Info infoFor(const Page &target) {
     } else if (target.create == printers::create) {
         info.text = printerText(state);
         if (state.printerState == "printing" || state.printerState == "paused") info.color = kAccent;
-    } else if (target.create == radio::create) {
-        const bool playing = state.mediaState == "playing" && state.mediaKind == "radio";
-        info.text = playing && !state.mediaTitle.isEmpty() ? state.mediaTitle : String("aus");
+    } else if (target.create == multimedia::create) {
+        // Was gerade läuft (Sender oder Folge), sonst die beiden Unterseiten.
+        const bool playing = state.mediaState == "playing";
+        info.text = playing && !state.mediaTitle.isEmpty() ? state.mediaTitle
+                                                           : String("Radio · Podcast");
         if (playing) info.color = kAccent;
-    } else if (target.create == podcasts::create) {
-        const bool playing = state.mediaState == "playing" && state.mediaKind == "podcast";
-        info.text = playing && !state.mediaTitle.isEmpty() ? state.mediaTitle : String("weiterhören");
-        if (playing) info.color = kAccent;
+    } else if (target.create == smarthome::create) {
+        // Zahl der eingeschalteten Steckdosen (nur die fürs Tablet freigegebenen).
+        if (state.smarthomeTotal < 0) {
+            info.text = "–";
+        } else if (state.smarthomeOn > 0) {
+            info.text = String(state.smarthomeOn) + " an";
+            info.color = kAccent;
+        } else {
+            info.text = state.smarthomeTotal == 0 ? String("keine") : String("alle aus");
+        }
     } else if (target.create == alarms::create) {
         if (state.alarmActive) {
             info.text = "klingelt";
@@ -253,12 +261,11 @@ Info infoFor(const Page &target) {
             info.text = state.nextAlarm.isEmpty() ? String("aus") : state.nextAlarm;
             if (!state.nextAlarm.isEmpty()) info.color = kText;
         }
-    } else if (target.create == wifi::create) {
-        const bool connected = WiFi.status() == WL_CONNECTED;
-        info.text = connected ? "verbunden" : "getrennt";
-        if (!connected) info.color = kAlarm;
     } else if (target.create == settings::create) {
-        info.text = "Anzeige";
+        // Seit 0.9.0 liegt WLAN unter „Gerät“ – deshalb steht sein Zustand hier.
+        const bool connected = WiFi.status() == WL_CONNECTED;
+        info.text = connected ? "Anzeige · WLAN" : "WLAN getrennt";
+        if (!connected) info.color = kAlarm;
     }
     return info;
 }

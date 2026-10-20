@@ -90,6 +90,11 @@ struct Snapshot {
     String printerFile;
     int printerProgress = -1;     // Prozent, -1 = unbekannt
     int printerRemaining = -1;    // Sekunden, -1 = unbekannt
+
+    // Steckdosen (Kachel „Smart Home“): wie viele der freigegebenen an sind.
+    // -1 = nicht eingerichtet oder Gateway nicht erreichbar.
+    int smarthomeOn = -1;
+    int smarthomeTotal = -1;
 };
 
 // Einmal beim Start aufrufen.
