@@ -283,7 +283,7 @@ String cameraStream(const String &cameraId, bool on);
 // --- Steckdosen (Seite „Smart Home“, ab 0.9.0) --------------------------------
 // LEDVANCE/Tuya und FRITZ!DECT – geschaltet wird über newsroom21, das Tablet
 // kennt weder Adressen noch Schlüssel. Der Pi liefert nur die Steckdosen, die
-// in der Weboberfläche „auf dem Tablet zeigen“ haben (höchstens acht).
+// in der Weboberfläche „auf dem Tablet zeigen“ haben (höchstens 45 = drei Seiten).
 struct Plug {
     String id;        // „tuya-…“ oder „fritz-…“
     String name;

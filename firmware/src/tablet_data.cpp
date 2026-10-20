@@ -808,7 +808,7 @@ String fetchPlugs(std::vector<Plug> &plugs) {
             plug.on = on.is<bool>() ? (on.as<bool>() ? 1 : 0) : -1;
             plug.watts = takeInt(entry["w"], 0, 4000, -1);
             if (looksLikePlugId(plug.id) && !plug.name.isEmpty()) out->push_back(plug);
-            if (out->size() >= 8) break;   // mehr Karten hat die Seite nicht
+            if (out->size() >= 45) break;   // drei Seiten à 15 Kacheln, wie der Pi begrenzt
         }
     }, &plugs);
 }

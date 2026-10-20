@@ -1319,3 +1319,15 @@ Kachel „Multimedia“, WLAN unter „Gerät“. Das Raster hat jetzt 14 Kachel
 
 Gebaut (Flash 58,5 %), per `scripts/release.sh` als 0.9.0 (Build
 2026102001) nach newsroom21 gelegt. Am Gerät noch nicht gesehen.
+
+### 2026-10-20 — 0.10.0: Smart Home als Raster 5 × 3, mit Blättern
+
+Hannes wählte aus vier Entwürfen (Artifact „Smart-Home-Seite: Entwürfe“)
+Entwurf **A**: 15 Kacheln je Seite (5 × 3, je 144 × 77 px, wie die
+Startseite, nur flacher). Eingeschaltet = ganze Kachel blau (`kAccent`),
+Wattzahl hellblau; aus = graue Fläche; offline = blasser Name, rot „offline“.
+Name bis zwei Zeilen (`ui_font_18`, 44 px hoch, `LV_LABEL_LONG_DOT`).
+Mehr als 15 Steckdosen: Knöpfe „‹“/„›“ und „Seite 1/2“ neben der
+Überschrift, sonst unsichtbar. Der Pi liefert bis zu 45 (drei Seiten,
+Antwort < 16 KB), das Tablet nimmt ebenfalls höchstens 45 an.
+Gebaut (Flash 58,5 %), per OTA bereitgelegt, am Gerät ungetestet.
