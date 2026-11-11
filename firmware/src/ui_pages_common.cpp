@@ -38,6 +38,7 @@ const Page kPages[] = {
     {"Drucker",    ui_icons::kPrinter,    kAccent,  printers::create,   printers::activate,   printers::work},
     {"Multimedia", ui_icons::kMultimedia, kAccent,  multimedia::create, multimedia::activate, multimedia::work},
     {"Smart Home", ui_icons::kSmartHome,  0xffd60a, smarthome::create,  smarthome::activate,  smarthome::work},
+    {"Einkauf",    ui_icons::kNews,      kAccent, shopping::create, shopping::activate, shopping::work, shopping::deactivate},
     {"Wecker",     ui_icons::kAlarm,      kAccent,  alarms::create,     alarms::activate,     alarms::work},
     {"Gerät",      ui_icons::kSettings,   kTextMuted, settings::create, settings::activate,   settings::work},
     // --- ohne Kachel, erreichbar über die übergeordnete Seite -------------

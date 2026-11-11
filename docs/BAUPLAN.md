@@ -1377,3 +1377,35 @@ kein Versand mit Handy-Token, keine externen Lesebestätigungen.
 ⚠️ **Noch kritisch:** Jeder mit Zugriff auf das freigegebene Touch-Display kann
 als Pi an die erlaubten Ziele senden und die freigegebenen Nachrichten lesen.
 Die Bedienung und Darstellung müssen am echten Display geprüft werden.
+
+
+### 2026-11-11 — 0.13.0: Gemeinsame Einkaufsliste
+
+Neue Kachel „Einkauf“ als 15. Kachel im vorhandenen Raster. Verwendet das
+vorhandene Listensymbol aus der eingebetteten Schrift. Auf der Seite Artikel
+mit Menge eingeben, ändern, abhaken, wieder öffnen oder löschen; Texttastatur
+beim Verlassen ausblenden. Der Pi speichert dauerhaft, das Gerät nur den zuletzt
+geladenen Stand. Es gibt keinen eigenen Einkaufsspeicher auf dem Tablet.
+
+GET `/api/tablet/shopping` liefert bis zu 40 Artikel (ID, Revision, Text,
+Abhakstatus) und bis zu 26 ausdrücklich angebotene Signal-Ziele (nur Name und
+Auswahlkennung). UTF-8 statt ASCII-Escapes hält selbst Umlaute innerhalb der
+16-KB-Antwortgrenze. Die Seite fragt alle zehn Sekunden und nach jeder Änderung
+neu ab. Mutationen gehen als Aktion `shopping` mit eng geprüftem Unterobjekt
+an die vorhandene authentifizierte Tablet-API. Artikelrevision und Ziel werden
+beim Antippen festgehalten; veraltete Änderungen meldet der Pi als Konflikt.
+
+„Per Signal senden“ schickt den offenen Stand an die ausgewählte freigegebene
+Person oder Gruppe. Persönliche Einkaufsstände, „erledigt“ und „rückgängig“
+liegen ausschließlich am Pi. Listenbefehle erfordern eine eigene Signal-Rolle
+und funktionieren ausschließlich im direkten Chat. Hinzufügen per Signal ist
+bewusst noch nicht enthalten. Zum Betrieb newsroom21 und Firmware
+0.13.0 / Build 2026111102 aktualisieren.
+
+✅ **Berücksichtigt:** bestehende HTTPS-/Token-Prüfung, keine freien Empfänger,
+Schema-/Revisionsprüfung am Pi, keine Netzwerkaufrufe im LVGL-Ereignisthread,
+begrenzte Listen, Tastatur beim Seitenwechsel verborgen.
+
+⚠️ **Noch kritisch:** Reale Touch-Bedienung, Schrift-/Zeilenumbrüche und
+Wiederverbindung am Gerät prüfen. Wer am Touch steht, kann die gemeinsame
+Liste lesen und bearbeiten. Die persistenten Daten liegen im Pi-Backup.

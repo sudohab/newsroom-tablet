@@ -197,3 +197,5 @@ lv_obj_t *addLine(lv_obj_t *area, const String &text, const lv_font_t *font,
 const char *weatherSymbol(int wmo);
 
 }  // namespace ui_pages
+
+namespace ui_pages { namespace shopping { lv_obj_t *create(lv_obj_t *parent); void activate(); void deactivate(); void work(); } }

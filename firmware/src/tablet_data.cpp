@@ -897,3 +897,59 @@ String switchPlug(const String &plugId, bool on) {
 }
 
 }  // namespace tablet_data
+
+namespace tablet_data {
+String fetchShopping(ShoppingList &list) {
+    list = ShoppingList();
+    const auto result = api_client::get("/api/tablet/shopping");
+    if (!result.ok) return result.error.isEmpty() ? String("Einkaufsliste nicht abrufbar") : result.error;
+    JsonDocument filter;
+    filter["count"] = true;
+    filter["items"][0]["id"] = true;
+    filter["items"][0]["revision"] = true;
+    filter["items"][0]["text"] = true;
+    filter["items"][0]["checked"] = true;
+    filter["targets"][0]["id"] = true;
+    filter["targets"][0]["label"] = true;
+    filter["targets"][0]["kind"] = true;
+    JsonDocument doc;
+    if (deserializeJson(doc, result.body, DeserializationOption::Filter(filter))) return "Antwort nicht lesbar";
+    list.count = constrain(doc["count"] | 0, 0, 40);
+    for (JsonObjectConst row : doc["items"].as<JsonArrayConst>()) {
+        ShoppingItem item;
+        item.id = take(row["id"], 16); item.revision = take(row["revision"], 16);
+        item.text = take(row["text"], 160); item.checked = row["checked"] | false;
+        if (item.id.length() == 16 && item.revision.length() == 16 && !item.text.isEmpty()) list.items.push_back(item);
+        if (list.items.size() >= 40) break;
+    }
+    for (JsonObjectConst row : doc["targets"].as<JsonArrayConst>()) {
+        SignalRecipient target;
+        target.id = take(row["id"], 24); target.label = take(row["label"], 80);
+        if (row["kind"] == "group") target.label += " (Gruppe)";
+        if (target.id.length() == 24 && !target.label.isEmpty()) list.targets.push_back(target);
+        if (list.targets.size() >= 26) break;
+    }
+    return String();
+}
+
+String changeShopping(ShoppingAction action, const ShoppingItem &item, const String &text,
+                      bool checked, const String &target) {
+    JsonDocument doc;
+    doc["action"] = "shopping";
+    auto body = doc["shopping"].to<JsonObject>();
+    switch (action) {
+        case ShoppingAction::Add: body["op"] = "add"; body["text"] = text; break;
+        case ShoppingAction::Edit: body["op"] = "edit"; body["text"] = text; break;
+        case ShoppingAction::Check: body["op"] = "check"; body["checked"] = checked; break;
+        case ShoppingAction::Delete: body["op"] = "delete"; break;
+        case ShoppingAction::Send: body["op"] = "send"; body["target"] = target; break;
+    }
+    if (action == ShoppingAction::Edit || action == ShoppingAction::Check || action == ShoppingAction::Delete) {
+        body["item_id"] = item.id; body["revision"] = item.revision;
+    }
+    String json;
+    serializeJson(doc, json);  // Escaping kommt aus ArduinoJson, nie aus freiem Shell-/HTML-Text.
+    const auto result = api_client::postJson("/api/tablet/action", json);
+    return result.ok ? String() : (result.error.isEmpty() ? String("Änderung fehlgeschlagen") : result.error);
+}
+}

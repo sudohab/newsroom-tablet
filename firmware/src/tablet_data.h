@@ -314,3 +314,12 @@ String fetchPlugs(std::vector<Plug> &plugs);
 String switchPlug(const String &plugId, bool on);
 
 }  // namespace tablet_data
+
+namespace tablet_data {
+struct ShoppingItem { String id, revision, text; bool checked = false; };
+struct ShoppingList { std::vector<ShoppingItem> items; std::vector<SignalRecipient> targets; int count = 0; };
+enum class ShoppingAction { Add, Edit, Check, Delete, Send };
+String fetchShopping(ShoppingList &list);
+String changeShopping(ShoppingAction action, const ShoppingItem &item, const String &text,
+                      bool checked, const String &target);
+}
