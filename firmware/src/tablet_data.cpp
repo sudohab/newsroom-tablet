@@ -563,6 +563,8 @@ String fetchClocks(std::vector<Clock> &clocks, std::vector<String> &presets,
     JsonDocument filter;
     filter["signal"]["family"] = true;
     filter["signal"]["text_max"] = true;
+    filter["signal"]["people"][0]["id"] = true;
+    filter["signal"]["people"][0]["label"] = true;
     filter["clocks"][0]["id"] = true;
     filter["clocks"][0]["name"] = true;
     filter["clocks"][0]["online"] = true;
@@ -591,6 +593,15 @@ String fetchClocks(std::vector<Clock> &clocks, std::vector<String> &presets,
     }
     // Fehlt das Feld (aeltere newsroom21-Fassung oder nicht freigeschaltet),
     // bleibt das Ziel einfach aus.
+    for (JsonObjectConst entry : doc["signal"]["people"].as<JsonArrayConst>()) {
+        SignalRecipient person;
+        person.id = take(entry["id"], 24);
+        person.label = take(entry["label"], 80);
+        bool valid = person.id.length() == 24 && !person.label.isEmpty();
+        for (char c : person.id) valid = valid && ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'));
+        if (valid) signal.people.push_back(person);
+        if (signal.people.size() >= 21) break;
+    }
     signal.family = doc["signal"]["family"] | false;
     const int textMax = doc["signal"]["text_max"] | 160;
     signal.textMax = (textMax >= 20 && textMax <= 160) ? textMax : 160;
@@ -608,6 +619,28 @@ String sendSignalFamily(const String &text) {
     const api_client::Result result = api_client::postJson("/api/tablet/action", json);
     return result.ok ? String()
                      : (result.error.isEmpty() ? String("Senden fehlgeschlagen") : result.error);
+}
+
+String sendSignalPerson(const String &target, const String &text) {
+    if (target.length() != 24) return "Empfaenger ungueltig";
+    for (char c : target) {
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) return "Empfaenger ungueltig";
+    }
+    String trimmed = text;
+    trimmed.trim();
+    if (trimmed.isEmpty()) return "Leerer Text";
+    if (trimmed.length() > 640) return "Text zu lang";
+    const String json = "{\"action\":\"signal_person_message\",\"signal_target\":"
+        + jsonString(target) + ",\"text\":" + jsonString(trimmed) + "}";
+    const auto result = api_client::postJson("/api/tablet/action", json);
+    return result.ok ? String() : (result.error.isEmpty() ? String("Senden fehlgeschlagen") : result.error);
+}
+
+String markSignalRead(long seq) {
+    if (seq < 0) return "Nachrichtenstand ungueltig";
+    const auto result = api_client::postJson("/api/tablet/action",
+        "{\"action\":\"signal_read\",\"signal_seq\":" + String(seq) + "}");
+    return result.ok ? String() : String("Lesestand nicht gespeichert");
 }
 
 String sendPreset(const String &clockId, int presetIndex) {
@@ -630,6 +663,7 @@ String fetchSignal(std::vector<SignalMessage> &messages, SignalInbox &inbox) {
     JsonDocument filter;
     filter["enabled"] = true;
     filter["can_send"] = true;
+    filter["unread"] = true;
     filter["seq"] = true;
     filter["messages"][0]["when"] = true;
     filter["messages"][0]["label"] = true;
@@ -643,6 +677,7 @@ String fetchSignal(std::vector<SignalMessage> &messages, SignalInbox &inbox) {
         o->inbox->enabled = doc["enabled"] | false;
         o->inbox->canSend = doc["can_send"] | false;
         o->inbox->seq = doc["seq"] | 0L;
+        o->inbox->unread = constrain(doc["unread"] | 0, 0, 20);
         for (JsonObjectConst entry : doc["messages"].as<JsonArrayConst>()) {
             SignalMessage message;
             message.when = take(entry["when"], 16);

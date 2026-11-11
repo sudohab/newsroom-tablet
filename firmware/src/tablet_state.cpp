@@ -61,6 +61,8 @@ JsonDocument makeFilter() {
     filter["weather"]["temp_min"] = true;
     filter["weather"]["temp_max"] = true;
     filter["weather"]["rain_probability"] = true;
+    filter["signal"]["unread"] = true;
+    filter["signal"]["count"] = true;
     filter["missed_call_count"] = true;
     filter["warnings"]["count"] = true;
     filter["warnings"]["headline"] = true;
@@ -139,6 +141,8 @@ void parse(const String &body) {
         next.rainProbability = weather["rain_probability"] | -1;
     }
 
+    next.signalUnread = constrain(doc["signal"]["unread"] | 0, 0, 20);
+    next.signalCount = constrain(doc["signal"]["count"] | 0, 0, 20);
     next.missedCallCount = doc["missed_call_count"] | 0;
     next.warningCount = doc["warnings"]["count"] | 0;
     next.warningHeadline = take(doc["warnings"]["headline"], 120);
@@ -226,6 +230,8 @@ void parse(const String &body) {
         && next.mediaState == snapshot.mediaState
         && next.mediaTitle == snapshot.mediaTitle
         && next.mediaKind == snapshot.mediaKind
+        && next.signalUnread == snapshot.signalUnread
+        && next.signalCount == snapshot.signalCount
         && next.missedCallCount == snapshot.missedCallCount
         && next.warningCount == snapshot.warningCount
         && next.warningHeadline == snapshot.warningHeadline

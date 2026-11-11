@@ -194,10 +194,14 @@ struct Clock {
     bool online = false;
 };
 
-// Zusaetzliches Ziel "Familie (Signal)": Der Pi schickt den Text in seine fest
-// eingestellte Signal-Familiengruppe. Das Geraet erfaehrt nur, DASS es das
-// Ziel gibt -- keine Gruppe, keine Mitglieder, keine Rufnummer.
+// Zusaetzliche Signal-Ziele: Familiengruppe und explizit freigegebene Personen.
+// Nur Namen und undurchsichtige Auswahlkennungen, keine Signal-ACI/Rufnummern.
+struct SignalRecipient {
+    String id;       // undurchsichtige Auswahlkennung, keine Signal-ACI
+    String label;    // vom Admin vergebener Anzeigename
+};
 struct SignalTarget {
+    std::vector<SignalRecipient> people;
     bool family = false;   // in der Weboberflaeche freigeschaltet?
     int textMax = 160;     // Zeichen je Nachricht
 };
@@ -210,6 +214,8 @@ String fetchClocks(std::vector<Clock> &clocks, std::vector<String> &presets,
 // Einen Text in die Signal-Familiengruppe schicken. Es gibt bewusst keinen
 // Empfaenger-Parameter: Wohin die Nachricht geht, entscheidet allein der Pi.
 String sendSignalFamily(const String &text);
+String sendSignalPerson(const String &target, const String &text);
+String markSignalRead(long seq);
 
 // Einen der gepflegten Texte schicken. `clockId` leer = an alle Uhren.
 String sendPreset(const String &clockId, int presetIndex);
@@ -230,7 +236,8 @@ struct SignalMessage {
 
 struct SignalInbox {
     bool enabled = false;   // in der Weboberflaeche eingeschaltet?
-    bool canSend = false;   // Ziel "Familie (Signal)" auf der Seite "Uhren" vorhanden?
+    bool canSend = false;   // freigegebene Signal-Ziele auf der Seite "Uhren" vorhanden?
+    int unread = 0;
     long seq = -1;          // aendert sich mit jeder neuen Nachricht
 };
 

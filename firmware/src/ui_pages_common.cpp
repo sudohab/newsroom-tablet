@@ -30,7 +30,7 @@ const Page kPages[] = {
     {"Wetter",     ui_icons::kWeather,    0xffd60a, weather::create,    weather::activate,    weather::work},
     {"Warnungen",  ui_icons::kWarning,    0xff9f0a, warnings::create,   warnings::activate,   warnings::work},
     {"Termine",    ui_icons::kCalendar,   kAccent,  calendar::create,   calendar::activate,   calendar::work},
-    {"Signal",     ui_icons::kSignal,     kAccent,  signal::create,     signal::activate,     signal::work},
+    {"Signal",     ui_icons::kSignal,     kAccent,  signal::create,     signal::activate,     signal::work, signal::deactivate},
     {"Anrufe",     ui_icons::kCalls,      kCall,    calls::create,      calls::activate,      calls::work},
     {"Uhren",      ui_icons::kClocks,     kAccent,  clocks::create,     clocks::activate,     clocks::work, clocks::deactivate},
     {"Timer",      ui_icons::kTimer,      kAccent,  timers::create,     timers::activate,     timers::work},

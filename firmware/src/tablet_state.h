@@ -35,6 +35,8 @@ struct Snapshot {
     int rainProbability = -1;
 
     // Die drei Felder rechts auf der Startseite
+    int signalUnread = 0;
+    int signalCount = 0;
     int missedCallCount = 0;
     int warningCount = 0;
     String warningHeadline;

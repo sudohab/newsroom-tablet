@@ -12,10 +12,9 @@
 // Links die vorgefertigten Texte, rechts die Auswahl des Ziels und das Feld
 // für eine freie Nachricht.
 //
-// „Familie (Signal)" ist ein weiteres Ziel auf demselben Knopf. Mehr kann das
-// Gerät mit Signal nicht: Es gibt keinen Empfänger zur Auswahl, keine Kamera
-// und keinen Befehl – der Pi schickt den Text unter seinem eigenen Konto in
-// die fest eingestellte Gruppe.
+// Die Auswahl enthält Uhren, die Familiengruppe und ausdrücklich am Pi
+// freigegebene Personen. Vor dem Netzwerkaufruf wird das Ziel festgehalten.
+// Der Pi prüft die aktuelle Freigabe bei JEDEM Versand erneut.
 //
 // Die vorgefertigten Texte werden **in der Weboberfläche gepflegt**, nicht
 // hier. Das Gerät darf sie nur schicken. Deshalb braucht ein neuer Text kein
@@ -60,10 +59,23 @@ int target = -1;
 int pendingPreset = -1;
 String pendingText;
 bool pendingSignal = false;
+String pendingRecipient;
+String pendingClock;
+String pendingName;
 bool loaded = false;
 
 bool isSignalTarget() {
-    return signalTarget.family && target == static_cast<int>(clocks.size());
+    return target >= static_cast<int>(clocks.size()) && target >= 0;
+}
+
+int lastTarget() {
+    return static_cast<int>(clocks.size() + signalTarget.people.size()) + (signalTarget.family ? 1 : 0) - 1;
+}
+
+String recipientId() {
+    const int index = target - static_cast<int>(clocks.size()) - (signalTarget.family ? 1 : 0);
+    return index >= 0 && index < static_cast<int>(signalTarget.people.size())
+        ? signalTarget.people[index].id : String();
 }
 
 String targetId() {
@@ -72,7 +84,12 @@ String targetId() {
 }
 
 String targetName() {
-    if (isSignalTarget()) return "Familie (Signal)";
+    if (isSignalTarget()) {
+        const int index = target - static_cast<int>(clocks.size()) - (signalTarget.family ? 1 : 0);
+        if (index >= 0 && index < static_cast<int>(signalTarget.people.size()))
+            return signalTarget.people[index].label + " (Signal)";
+        return "Familie (Signal)";
+    }
     if (clocks.empty()) return "keine Uhr";
     if (target < 0) return "alle Uhren";
     return clocks[target].name;
@@ -88,11 +105,11 @@ void updateTargetButton() {
 }
 
 // Ein Druck schaltet auf das nächste Ziel weiter: alle Uhren, jede Uhr
-// einzeln, zuletzt – falls freigeschaltet – die Signal-Familiengruppe. Bei
+// einzeln, danach Familiengruppe und freigegebene Signal-Personen. Bei
 // zwei Uhren ist das schneller als eine Auswahlliste, und die Beschriftung
 // sagt immer, wohin es geht.
 void onTarget(lv_event_t *) {
-    const int last = static_cast<int>(clocks.size()) + (signalTarget.family ? 1 : 0) - 1;
+    const int last = lastTarget();
     if (last < 0) return;
     ++target;
     if (target > last) target = -1;
@@ -108,6 +125,9 @@ void onPreset(lv_event_t *event) {
     // Das Ziel JETZT festhalten: Gesendet wird in einer anderen Aufgabe, und
     // bis dahin könnte jemand den Knopf weitergeschaltet haben.
     pendingSignal = isSignalTarget();
+    pendingRecipient = recipientId();
+    pendingClock = targetId();
+    pendingName = targetName();
     lv_label_set_text(status, ("Sende an " + targetName() + " …").c_str());
     job = Job::SendPreset;
 }
@@ -124,6 +144,9 @@ void onKeyboard(lv_event_t *event) {
     lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN);
     if (pendingText.isEmpty()) return;
     pendingSignal = isSignalTarget();
+    pendingRecipient = recipientId();
+    pendingClock = targetId();
+    pendingName = targetName();
     lv_label_set_text(status, ("Sende an " + targetName() + " …").c_str());
     job = Job::SendText;
 }
@@ -227,15 +250,15 @@ void work() {
             message = tablet_data::fetchClocks(clocks, presets, signalTarget);
             loaded = message.isEmpty();
             {
-                const int last = static_cast<int>(clocks.size()) + (signalTarget.family ? 1 : 0) - 1;
+                const int last = lastTarget();
                 if (target > last) target = -1;
-                if (target < 0 && clocks.empty() && signalTarget.family) target = 0;
+                if (target < 0 && clocks.empty() && lastTarget() >= 0) target = 0;
             }
             lvgl_port_lock(-1);
             rebuild();
             lv_label_set_text(status,
                 !message.isEmpty() ? message.c_str()
-                : (clocks.empty() && !signalTarget.family) ? "Keine Uhr eingerichtet"
+                : (lastTarget() < 0) ? "Keine Uhr eingerichtet"
                 : presets.empty() ? "Keine Texte – in der Weboberfläche anlegen"
                 : (String(presets.size()) + " Texte · " + String(clocks.size()) + " Uhren").c_str());
             lvgl_port_unlock();
@@ -245,15 +268,18 @@ void work() {
             if (pendingSignal) {
                 // Signal kennt die Nummern der Liste nicht – der Text selbst geht mit.
                 message = (pendingPreset >= 0 && pendingPreset < static_cast<int>(presets.size()))
-                    ? tablet_data::sendSignalFamily(presets[pendingPreset])
+                    ? (pendingRecipient.isEmpty() ? tablet_data::sendSignalFamily(presets[pendingPreset])
+                                                   : tablet_data::sendSignalPerson(pendingRecipient, presets[pendingPreset]))
                     : String("Text nicht vorhanden");
             } else {
-                message = tablet_data::sendPreset(targetId(), pendingPreset);
+                message = tablet_data::sendPreset(pendingClock, pendingPreset);
             }
             break;
         case Job::SendText:
-            message = pendingSignal ? tablet_data::sendSignalFamily(pendingText)
-                                    : tablet_data::sendClockText(targetId(), pendingText);
+            message = pendingSignal
+                ? (pendingRecipient.isEmpty() ? tablet_data::sendSignalFamily(pendingText)
+                                              : tablet_data::sendSignalPerson(pendingRecipient, pendingText))
+                : tablet_data::sendClockText(pendingClock, pendingText);
             break;
         case Job::None:
             return;
@@ -261,8 +287,7 @@ void work() {
 
     lvgl_port_lock(-1);
     if (message.isEmpty()) {
-        lv_label_set_text(status, pendingSignal ? "Gesendet an Familie (Signal)"
-                                                : ("Gesendet an " + targetName()).c_str());
+        lv_label_set_text(status, ("Gesendet an " + pendingName).c_str());
         // Nach dem Senden das Feld leeren: Der nächste Text fängt neu an.
         if (current == Job::SendText) lv_textarea_set_text(textArea, "");
     } else {

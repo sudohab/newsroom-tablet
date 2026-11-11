@@ -1343,3 +1343,37 @@ während es klingelt. Gibt es nur den Pi, ist der Knopf ausgegraut. Die
 Gerätekennung wird vor dem Einsetzen ins JSON geprüft (`pi` oder a–z, 0–9,
 Bindestrich). Ältere newsroom21 ohne `devices`: nur der Pi, „device“ wird
 beim Anlegen weggelassen. Gebaut (Flash 58,6 %), per OTA bereit, ungetestet.
+
+
+### 2026-11-11 — 0.12.0: Signal-Zähler und freigegebene Sendeziele
+
+Die Startkachel Signal zeigt den lokalen Ungelesen-Zähler aus
+`GET /api/tablet/state` (`signal.unread`, zusätzlich `signal.count`). Auf der
+Signal-Seite wird nach erfolgreichem Anzeigen der geladene `seq` über die
+Tablet-Aktion `signal_read` quittiert. Hintergrundabfragen, eigene Nachrichten
+und abgelaufene Texte erzeugen keine ungelesenen Einträge. Spätere Nachrichten
+werden nicht durch eine ältere Quittung gelesen. Es werden keine externen
+Signal-Lesebestätigungen versendet; der Zustand lebt nur im Arbeitsspeicher.
+
+Auf der Seite Uhren enthält der Zielknopf neben Uhren und Familiengruppe die
+in newsroom21 ausdrücklich freigegebenen Personen. Die Weboberfläche trennt
+„direkt“ (eingehend) von „vom Touch anschreiben“ (ausgehend); für den Admin
+existiert eine eigene Freigabe. Die neuen Rechte sind standardmäßig aus.
+`GET /api/tablet/clocks` liefert dazu `signal.people: [{id, label}]` mit
+undurchsichtigen 24-stelligen Auswahlkennungen. `signal_person_message` sendet
+`signal_target` und Text, niemals eine Rufnummer oder ACI. Der Pi prüft die
+aktuelle Freigabeliste je Anfrage und verwendet dieselbe Mengenbremse wie für
+die Familiengruppe. Ziel, Name und Uhrkennung werden beim Auslösen festgehalten.
+
+Für den Betrieb sind newsroom21 mit dieser API-Erweiterung und Firmware
+0.12.0 (Build 2026111101) erforderlich. Die Familiengruppen-Aktion bleibt
+abwärtskompatibel. Das Firmware-Abbild wird signiert für den normalen
+Update-Ablauf in newsroom21 bereitgelegt; nicht direkt auf ein Gerät geflasht.
+
+✅ **Berücksichtigt:** bestehende HTTPS-/Token-Prüfung, begrenzte Antworten und
+Listen, keine freien Empfänger, Freigaben auch bei veralteter Touch-Liste geprüft,
+kein Versand mit Handy-Token, keine externen Lesebestätigungen.
+
+⚠️ **Noch kritisch:** Jeder mit Zugriff auf das freigegebene Touch-Display kann
+als Pi an die erlaubten Ziele senden und die freigegebenen Nachrichten lesen.
+Die Bedienung und Darstellung müssen am echten Display geprüft werden.

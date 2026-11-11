@@ -213,7 +213,10 @@ Info infoFor(const Page &target) {
             info.color = kText;
         }
     } else if (target.create == signal::create) {
-        info.text = "Nachrichten";
+        info.text = state.signalUnread > 0 ? "ungelesen"
+            : state.signalCount > 0 ? String(state.signalCount) + " Nachrichten" : "keine neuen";
+        info.badge = state.signalUnread;
+        if (state.signalUnread > 0) info.color = kAccent;
     } else if (target.create == calls::create) {
         if (state.missedCallCount > 0) {
             info.text = "verpasst";

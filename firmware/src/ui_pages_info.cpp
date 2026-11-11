@@ -1,4 +1,5 @@
 #include <vector>
+#include <atomic>
 
 #include "fonts/ui_fonts.h"
 #include "lvgl_port/lvgl_v8_port.h"
@@ -271,11 +272,15 @@ uint32_t lastPollMs = 0;
 long shownSeq = -2;          // -2 = noch nie gezeichnet
 bool shownEnabled = false;
 bool shownError = false;
+std::atomic<bool> active{false};
 }  // namespace
 
 lv_obj_t *create(lv_obj_t *parent) { return view.build(parent, "Signal"); }
 
+void deactivate() { active = false; }
+
 void activate() {
+    active = true;
     view.needsRefresh = true;
     shownSeq = -2;           // beim Öffnen immer frisch zeichnen
 }
@@ -287,14 +292,19 @@ void work() {
     lastPollMs = now;
 
     const String error = tablet_data::fetchSignal(list, inbox);
+    if (!active) return;  // inzwischen geschlossene Seite nicht als gelesen quittieren
     const bool failed = !error.isEmpty();
     // Nichts Neues: Bild in Ruhe lassen.
-    if (!failed && !shownError && inbox.seq == shownSeq && inbox.enabled == shownEnabled) return;
+    if (!failed && !shownError && inbox.seq == shownSeq && inbox.enabled == shownEnabled) {
+        if (inbox.enabled && inbox.unread > 0) tablet_data::markSignalRead(inbox.seq);
+        return;
+    }
     shownSeq = failed ? -2 : inbox.seq;
     shownEnabled = inbox.enabled;
     shownError = failed;
 
     lvgl_port_lock(-1);
+    if (!active) { lvgl_port_unlock(); return; }
     lv_obj_clean(view.area);
     if (failed) {
         view.setStatus(error);
@@ -317,11 +327,14 @@ void work() {
             addLine(view.area, message.text, &ui_font_22, kText, 700);
         }
         if (inbox.canSend) {
-            addLine(view.area, "Schreiben: Seite Uhren, Ziel „Familie (Signal)“",
+            addLine(view.area, "Schreiben: Seite Uhren, freigegebene Signal-Ziele",
                     &ui_font_18, kTextMuted, 700);
         }
     }
     lvgl_port_unlock();
+    // Nur die tatsächlich geladene Seite quittieren, nie ein Hintergrund-Poll.
+    // Neue Nachrichten nach diesem Stand bleiben am Pi ungelesen.
+    if (!failed && inbox.enabled && inbox.unread > 0) tablet_data::markSignalRead(inbox.seq);
 }
 }  // namespace signal
 

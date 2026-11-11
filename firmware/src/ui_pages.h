@@ -139,6 +139,7 @@ void deactivate();
 }  // namespace clocks
 
 namespace signal {
+void deactivate();
 lv_obj_t *create(lv_obj_t *parent);
 void activate();
 void work();
